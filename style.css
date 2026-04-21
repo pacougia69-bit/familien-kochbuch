@@ -1520,3 +1520,23 @@ img {
 
   .recipe-hero { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
 }
+.btn-edit-recipe {
+    position: absolute;
+    top: var(--space-4);
+    right: 60px; /* Neben dem Schließen-Button */
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-edit-recipe svg {
+    width: 18px;
+    height: 18px;
+    color: var(--color-accent);
+}
