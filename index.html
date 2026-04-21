@@ -6,17 +6,19 @@
     <meta name="theme-color" content="#E85D4A" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Familien-Kochbuch</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
     <link rel="stylesheet" href="style.css" />
+    
     <meta property="og:image" content="https://bolt.new/static/og_default.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
-</head>
+  </head>
   <body>
 
-    <!-- ===== APP HEADER ===== -->
     <header class="app-header">
       <div class="header-inner">
         <div class="header-brand">
@@ -36,17 +38,14 @@
       </div>
     </header>
 
-    <!-- ===== MAIN CONTENT ===== -->
     <main class="app-main">
 
-      <!-- Filter Bar -->
       <div class="filter-bar">
         <button class="filter-btn active" data-filter="all">Alle</button>
         <button class="filter-btn" data-filter="Phil">Phil</button>
         <button class="filter-btn" data-filter="Zusammen">Zusammen</button>
       </div>
 
-      <!-- Search & Time Filter -->
       <div class="search-section">
         <div class="search-input-wrapper">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -75,13 +74,10 @@
         </div>
       </div>
 
-      <!-- Results Info -->
       <div class="results-info" id="resultsInfo"></div>
 
-      <!-- Recipe Grid -->
       <div class="recipes-grid" id="recipesGrid"></div>
 
-      <!-- Empty State -->
       <div class="empty-state hidden" id="emptyState">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -92,14 +88,12 @@
 
     </main>
 
-    <!-- ===== FAB ===== -->
     <button class="fab" id="fabBtn" aria-label="Neues Rezept hinzufügen">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
     </button>
 
-    <!-- ===== RECIPE DETAIL OVERLAY ===== -->
     <div class="overlay hidden" id="recipeOverlay" role="dialog" aria-modal="true">
       <div class="overlay-backdrop" id="recipeBackdrop"></div>
       <div class="overlay-sheet recipe-sheet" id="recipeSheet">
@@ -128,7 +122,6 @@
             </div>
           </div>
 
-          <!-- Portions Calculator -->
           <div class="section-card">
             <div class="portions-row">
               <div class="portions-label">
@@ -148,7 +141,6 @@
             </div>
           </div>
 
-          <!-- Ingredients -->
           <div class="section-card">
             <div class="section-header">
               <h3>Zutaten</h3>
@@ -164,13 +156,11 @@
             <ul class="ingredients-list" id="detailIngredients"></ul>
           </div>
 
-          <!-- Steps -->
           <div class="section-card">
             <h3>Zubereitung</h3>
             <ol class="steps-list" id="detailSteps"></ol>
           </div>
 
-          <!-- Family Pinboard -->
           <div class="section-card pinboard-card">
             <h3>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -194,7 +184,6 @@
       </div>
     </div>
 
-    <!-- ===== SHOPPING LIST PANEL ===== -->
     <div class="overlay hidden" id="shoppingOverlay" role="dialog" aria-modal="true">
       <div class="overlay-backdrop" id="shoppingBackdrop"></div>
       <div class="overlay-sheet shopping-sheet" id="shoppingSheet">
@@ -210,118 +199,4 @@
         <div class="panel-scroll">
           <div class="shopping-empty hidden" id="shoppingEmpty">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-              <line x1="3" y1="6" x2="21" y2="6"/>
-              <path d="M16 10a4 4 0 01-8 0"/>
-            </svg>
-            <p>Die Liste ist leer</p>
-            <span>Füge Zutaten aus einem Rezept hinzu</span>
-          </div>
-          <ul class="shopping-items" id="shoppingItems"></ul>
-          <div class="shopping-divider" id="shoppingDivider"></div>
-          <div class="shopping-free-notes">
-            <h4>Freie Notizen</h4>
-            <ul class="free-notes-list" id="freeNotesList"></ul>
-            <div class="note-input-row">
-              <input type="text" id="freeNoteInput" class="note-input" placeholder="z. B. Müllbeutel, Spülmittel…" />
-              <button class="btn-add-note" id="addFreeNoteBtn" aria-label="Notiz hinzufügen">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="panel-footer">
-          <button class="btn-clear-list" id="clearListBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-            </svg>
-            Liste leeren
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== ADD RECIPE OVERLAY ===== -->
-    <div class="overlay hidden" id="addRecipeOverlay" role="dialog" aria-modal="true">
-      <div class="overlay-backdrop" id="addRecipeBackdrop"></div>
-      <div class="overlay-sheet add-recipe-sheet" id="addRecipeSheet">
-        <div class="sheet-drag-handle"></div>
-        <div class="panel-header">
-          <h2>Neues Rezept</h2>
-          <button class="sheet-close-btn-inline" id="closeAddRecipeBtn" aria-label="Schließen">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-        <div class="panel-scroll">
-          <form class="add-recipe-form" id="addRecipeForm" novalidate>
-
-            <div class="form-group">
-              <label for="newTitle">Titel *</label>
-              <input type="text" id="newTitle" placeholder="z. B. Omas Apfelkuchen" />
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="newCategory">Kategorie *</label>
-                <select id="newCategory">
-                  <option value="">Wählen…</option>
-                  <option value="Phil">Phil</option>
-                  <option value="Zusammen">Zusammen</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="newDuration">Dauer (Min) *</label>
-                <input type="number" id="newDuration" min="1" placeholder="30" />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="newServings">Basis-Portionen</label>
-              <input type="number" id="newServings" min="1" value="4" />
-            </div>
-
-            <div class="form-group">
-              <label for="newImage">Bild-URL (optional)</label>
-              <input type="url" id="newImage" placeholder="https://…" />
-            </div>
-
-            <div class="form-group">
-              <label>Zutaten</label>
-              <div class="ingredient-builder" id="ingredientBuilder"></div>
-              <button type="button" class="btn-add-row" id="addIngredientBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Zutat hinzufügen
-              </button>
-            </div>
-
-            <div class="form-group">
-              <label>Zubereitungsschritte</label>
-              <div class="steps-builder" id="stepsBuilder"></div>
-              <button type="button" class="btn-add-row" id="addStepBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Schritt hinzufügen
-              </button>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn-secondary" id="cancelAddRecipeBtn">Abbrechen</button>
-              <button type="submit" class="btn-primary">Rezept speichern</button>
-            </div>
-
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <script src="app.js"></script>
-  </body>
-</html>
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002
