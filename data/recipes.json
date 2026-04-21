@@ -1,0 +1,21 @@
+[
+  {
+    "id": 1,
+    "title": "Spaghetti Bolognese",
+    "image": "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "category": "Zusammen",
+    "duration": 45,
+    "servings": 4,
+    "ingredients": [
+      {"menge": 500, "einheit": "g", "name": "Spaghetti"},
+      {"menge": 400, "einheit": "g", "name": "Hackfleisch"},
+      {"menge": 1, "einheit": "Dose", "name": "Tomaten"}
+    ],
+    "steps": [
+      "Nudeln kochen.",
+      "Fleisch anbraten.",
+      "Sauce dazugeben und köcheln."
+    ],
+    "notes": ["Schmeckt Phil besonders gut!"]
+  }
+]
