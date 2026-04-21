@@ -17,5 +17,180 @@
       "Sauce dazugeben und köcheln."
     ],
     "notes": ["Schmeckt Phil besonders gut!"]
+  },
+  {
+    "id": 2,
+    "title": "Sauerkraut-Eintopf",
+    "image": "https://images.pexels.com/photos/10305696/pexels-photo-10305696.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "category": "Zusammen",
+    "duration": 30,
+    "servings": 4,
+    "ingredients": [
+      {"menge": 4, "einheit": "Stück", "name": "Kartoffeln"},
+      {"menge": 1, "einheit": "Stück", "name": "Zwiebel"},
+      {"menge": 1, "einheit": "Zehe", "name": "Knoblauch"},
+      {"menge": 500, "einheit": "g", "name": "Sauerkraut"},
+      {"menge": 1, "einheit": "Liter", "name": "Gemüsebrühe"},
+      {"menge": 2, "einheit": "EL", "name": "Tomatenmark"},
+      {"menge": 2, "einheit": "Stück", "name": "Paprikaschoten (rot)"},
+      {"menge": 1, "einheit": "Dose", "name": "Kidneybohnen"},
+      {"menge": 1, "einheit": "EL", "name": "ital. Kräuter"},
+      {"menge": 1, "einheit": "EL", "name": "Paprika edelsüß"},
+      {"menge": 0, "einheit": "n.B.", "name": "Paprika rosenscharf"},
+      {"menge": 0, "einheit": "n.B.", "name": "Creme Fraiche"}
+    ],
+    "steps": [
+      "Kartoffeln schälen und würfeln. Zwiebeln und Knoblauch klein schneiden.",
+      "Sauerkraut in ein Sieb geben und mit Wasser abspülen (damit es nicht so sauer ist).",
+      "Öl andünsten, Zwiebeln und nach 2 Min. Knoblauch dazu.",
+      "Kartoffeln und Sauerkraut zufügen, Gemüsebrühe angießen.",
+      "Mit Salz, Pfeffer, Tomatenmark, Kräutern und Paprikagewürz würzen. Ca. 15 Minuten köcheln.",
+      "Paprika zufügen, weitere 10 Min. köcheln. Kidneybohnen (oder Kichererbsen) zufügen.",
+      "5 Min. ziehen lassen, Creme Fraiche oben drauf."
+    ],
+    "notes": ["Sauerkraut gut abspülen für milderen Geschmack!"]
+  },
+  {
+    "id": 3,
+    "title": "Linsen-Blumenkohl-Suppe",
+    "image": "https://images.pexels.com/photos/539451/pexels-photo-539451.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "category": "Zusammen",
+    "duration": 25,
+    "servings": 2,
+    "ingredients": [
+      {"menge": 400, "einheit": "g", "name": "Blumenkohl"},
+      {"menge": 15, "einheit": "g", "name": "frischer Ingwer"},
+      {"menge": 1, "einheit": "Zehe", "name": "Knoblauch"},
+      {"menge": 100, "einheit": "g", "name": "rote Linsen"},
+      {"menge": 0.5, "einheit": "TL", "name": "Curry"},
+      {"menge": 600, "einheit": "ml", "name": "Gemüsebrühe"},
+      {"menge": 75, "einheit": "ml", "name": "Sahne"},
+      {"menge": 0, "einheit": "etwas", "name": "passierte Tomaten"},
+      {"menge": 100, "einheit": "ml", "name": "frischer O-Saft"},
+      {"menge": 1, "einheit": "Prise", "name": "Zucker"},
+      {"menge": 0, "einheit": "n.B.", "name": "frische Minze"}
+    ],
+    "steps": [
+      "Blumenkohl putzen und in Röschen teilen. Ingwer schälen und würfeln.",
+      "Knoblauch in 1 EL Öl glasig dünsten.",
+      "Blumenkohl, rote Linsen und Curry zugeben, kurz mitdünsten.",
+      "Gemüsebrühe und Sahne zugießen, mit Salz würzen, aufkochen.",
+      "Zugedeckt bei mittlerer Hitze ca. 5 Min. garen.",
+      "Etwas pass. Tomaten und O-Saft zugeben, 8-10 Min. weiter garen.",
+      "Mit Salz und Zucker abschmecken, mit Minze garnieren."
+    ],
+    "notes": ["Besonders fruchtig durch den O-Saft."]
+  },
+  {
+    "id": 4,
+    "title": "Gefüllte Paprika Phil",
+    "image": "https://images.pexels.com/photos/10552250/pexels-photo-10552250.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "category": "Phil",
+    "duration": 45,
+    "servings": 4,
+    "ingredients": [
+      {"menge": 1.5, "einheit": "Becher", "name": "Brühe (für Reis)"},
+      {"menge": 1, "einheit": "Becher", "name": "Reis"},
+      {"menge": 2, "einheit": "Stück", "name": "Zwiebeln"},
+      {"menge": 0, "einheit": "n.B.", "name": "Kochschinken"},
+      {"menge": 1, "einheit": "Packung", "name": "passierte Tomaten"},
+      {"menge": 4, "einheit": "Stück", "name": "Paprikaschoten"},
+      {"menge": 2, "einheit": "TL", "name": "Olivenöl"},
+      {"menge": 0, "einheit": "etwas", "name": "Brühe (für Sauce)"},
+      {"menge": 1, "einheit": "Becher", "name": "Schmand"}
+    ],
+    "steps": [
+      "Reis in Brühe ca. 5 Minuten vorkochen, dann abgießen.",
+      "Zwiebeln in Würfel schneiden, Paprika-Deckel abschneiden.",
+      "Zwiebeln anbraten, Reis und ca. die Hälfte der Tomaten zugeben sowie Schinken.",
+      "Mit Pfeffer, Salz und Paprika würzen. Paprikaschoten damit füllen, Deckel aufsetzen.",
+      "Restliche Tomaten mit Brühe und Schmand mischen, würzen und in einen Topf geben.",
+      "Gefüllte Paprika einsetzen und ca. 30 Min. bei mittlerer Hitze garen."
+    ],
+    "notes": ["Phils Favorit!"]
+  },
+  {
+    "id": 5,
+    "title": "Kartoffelgulasch",
+    "image": "https://images.pexels.com/photos/15729731/pexels-photo-15729731.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "category": "Phil",
+    "duration": 50,
+    "servings": 4,
+    "ingredients": [
+      {"menge": 1, "einheit": "kg", "name": "Kartoffeln"},
+      {"menge": 150, "einheit": "g", "name": "Mettenden"},
+      {"menge": 3, "einheit": "Zehen", "name": "Knoblauch"},
+      {"menge": 2, "einheit": "EL", "name": "Paprikapulver edelsüß"},
+      {"menge": 1, "einheit": "Liter", "name": "Hühnerbrühe"},
+      {"menge": 1, "einheit": "TL", "name": "Majoran"},
+      {"menge": 150, "einheit": "g", "name": "Speck"},
+      {"menge": 3, "einheit": "Stück", "name": "Zwiebeln"},
+      {"menge": 4, "einheit": "EL", "name": "Butterschmalz"},
+      {"menge": 2, "einheit": "Stück", "name": "Lorbeerblätter"},
+      {"menge": 4, "einheit": "EL", "name": "saure Sahne"},
+      {"menge": 0, "einheit": "wenig", "name": "Kümmel (ggf.)"}
+    ],
+    "steps": [
+      "Kartoffeln schälen und würfeln. Speck und Wurst in Stücke schneiden, Zwiebel hacken.",
+      "Schmalz erhitzen, Zwiebeln darin andünsten, Knoblauch und Speck dazu, knusprig braten.",
+      "Paprikapulver zugeben, 1 Schuss Essig und Brühe angießen. Lorbeerblatt, Majoran und Gewürze dazu.",
+      "Kartoffeln dazu und ca. 30 Min garen.",
+      "Mettenden im übrigen Schmalz anbraten und zugeben. Saure Sahne oben drauf."
+    ],
+    "notes": ["Herzhaft und wärmend."]
+  },
+  {
+    "id": 6,
+    "title": "Schnelle Fleisch-Gemüse-Pfanne",
+    "image": "https://images.pexels.com/photos/2092906/pexels-photo-2092906.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "category": "Phil",
+    "duration": 25,
+    "servings": 4,
+    "ingredients": [
+      {"menge": 2, "einheit": "Stück", "name": "Paprika"},
+      {"menge": 0, "einheit": "n.B.", "name": "Fleisch (z.B. Geschnetzeltes)"},
+      {"menge": 1, "einheit": "Packung", "name": "Gnocchi"},
+      {"menge": 0, "einheit": "etwas", "name": "Sahne"},
+      {"menge": 1, "einheit": "Stück", "name": "Zwiebel"},
+      {"menge": 0, "einheit": "n.B.", "name": "Petersilie"},
+      {"menge": 0.5, "einheit": "Packung", "name": "passierte Tomaten"}
+    ],
+    "steps": [
+      "Fleisch anbraten, anschließend aus der Pfanne nehmen.",
+      "Paprika- und Zwiebelwürfel in Butterschmalz oder Öl anbraten.",
+      "Gnocchi auch anbraten und kurz herausnehmen.",
+      "Fleisch und Paprika zurück in die Pfanne, passierte Tomaten und Sahne dazu, aufkochen.",
+      "Gnocchi dazu, mit Salz, Pfeffer und einer Prise Zucker würzen.",
+      "Mit frischer Petersilie bestreuen."
+    ],
+    "notes": ["Super schnell nach der Arbeit."]
+  },
+  {
+    "id": 7,
+    "title": "Champignon-Lauch-Omelett",
+    "image": "https://images.pexels.com/photos/1435184/pexels-photo-1435184.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "category": "Zusammen",
+    "duration": 45,
+    "servings": 4,
+    "ingredients": [
+      {"menge": 400, "einheit": "g", "name": "Lauch"},
+      {"menge": 400, "einheit": "g", "name": "braune Champignons"},
+      {"menge": 1, "einheit": "Bund", "name": "Petersilie"},
+      {"menge": 4, "einheit": "Stück", "name": "Eier"},
+      {"menge": 100, "einheit": "ml", "name": "Milch"},
+      {"menge": 800, "einheit": "g", "name": "Spitzkohl"},
+      {"menge": 200, "einheit": "g", "name": "Möhren"},
+      {"menge": 8, "einheit": "Stück", "name": "Paranusskerne"},
+      {"menge": 40, "einheit": "g", "name": "Cashewkerne"}
+    ],
+    "steps": [
+      "Spitzkohl putzen, vierteln und in feine Streifen schneiden. Möhren raspeln.",
+      "Salat mit Essig, Öl und Apfeldicksaft anmachen und kräftig durchkneten.",
+      "Lauch in Ringe, Pilze in Scheiben schneiden. In der Pfanne anbraten.",
+      "Eier und Milch verquirlen, über das Gemüse gießen.",
+      "Bei niedriger Hitze ca. 20 Min stocken lassen.",
+      "Mit Nüssen und Petersilie garnieren und mit dem Krautsalat servieren."
+    ],
+    "notes": ["Deftiges Wohlfühlgericht."]
   }
 ]
