@@ -32,7 +32,7 @@
   const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 
   // ─── Firebase Listener ───────────────────────────────────
-  const q = query(collection(db, 'rezepte'), orderBy('name'));
+  const q = query(collection(db, 'recipes'), orderBy('title'));
   onSnapshot(q, (snapshot) => {
     allRecipes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     renderRecipes();
@@ -44,7 +44,7 @@
     const grid = document.getElementById('recipeGrid');
     const filtered = activeFilter === 'alle'
       ? allRecipes
-      : allRecipes.filter(r => r.kategorien && r.kategorien.includes(activeFilter));
+      : allRecipes.filter(r => r.category === activeFilter);
 
     if (filtered.length === 0) {
       grid.innerHTML = `<div class="empty-state">🍽️<br>Noch keine Rezepte.<br>Tippe auf <strong>+</strong> um loszulegen!</div>`;
@@ -55,18 +55,18 @@
       <div class="recipe-card" onclick="openRecipe('${r.id}')">
         <div class="recipe-emoji">${r.emoji || '🍳'}</div>
         <div class="recipe-info">
-          <div class="recipe-name">${r.name}</div>
+          <div class="recipe-name">${r.title || r.name || '?'}</div>
           <div class="recipe-meta">
-            ${r.dauer ? `⏱ ${r.dauer} Min` : ''}
+            ${r.duration ? `⏱ ${r.duration} Min` : ''}
             ${r.portionen ? `· 👤 ${r.portionen}` : ''}
           </div>
           <div class="recipe-tags">
-            ${(r.kategorien || []).map(k => `<span class="tag">${k}</span>`).join('')}
+            ${r.category ? `<span class="tag">${r.category}</span>` : ''}
           </div>
         </div>
         <div class="recipe-actions" onclick="event.stopPropagation()">
           <button class="btn-icon" onclick="editRecipe('${r.id}')">✏️</button>
-          <button class="btn-icon danger" onclick="deleteRecipe('${r.id}', '${r.name}')">🗑️</button>
+          <button class="btn-icon danger" onclick="deleteRecipe('${r.id}', '${r.title || r.name}')">🗑️</button>
         </div>
       </div>
     `).join('');
@@ -84,9 +84,9 @@
   function renderDetail() {
     const r = currentRecipe;
     document.getElementById('detailEmoji').textContent = r.emoji || '🍳';
-    document.getElementById('detailName').textContent = r.name;
+    document.getElementById('detailName').textContent = r.title || r.name || '?';
     document.getElementById('detailMeta').textContent = [
-      r.dauer ? `⏱ ${r.dauer} Min` : '',
+      r.duration ? `⏱ ${r.duration} Min` : '',
       r.portionen ? `👤 ${r.portionen * portionMultiplier} Portionen` : ''
     ].filter(Boolean).join('  ·  ');
     document.getElementById('portionCount').textContent = r.portionen ? r.portionen * portionMultiplier : 1;
@@ -159,7 +159,7 @@
   window.spinWheel = function() {
     const filtered = activeFilter === 'alle'
       ? allRecipes
-      : allRecipes.filter(r => r.kategorien && r.kategorien.includes(activeFilter));
+      : allRecipes.filter(r => r.category === activeFilter);
     if (filtered.length === 0) { alert('Keine Rezepte für diesen Filter!'); return; }
     const winner = filtered[Math.floor(Math.random() * filtered.length)];
     const el = document.getElementById('wheelResult');
@@ -325,14 +325,14 @@
     if (!name) { alert('Bitte einen Namen eingeben!'); return; }
     const kategorien = [...document.querySelectorAll('.kat-checkbox:checked')].map(c => c.value);
     const data = {
-      name,
+      title: name,
       emoji: document.getElementById('recipeEmoji').value || '🍳',
-      dauer: parseInt(document.getElementById('recipeDauer').value) || 0,
+      duration: parseInt(document.getElementById('recipeDauer').value) || 0,
       portionen: parseInt(document.getElementById('recipePortionen').value) || 4,
       notizen: document.getElementById('recipeNotizen').value.trim(),
-      kategorien,
-      zutaten: formZutaten.filter(z => z.name),
-      schritte: formSchritte.filter(s => s.trim()),
+      category: [...document.querySelectorAll('.kat-checkbox:checked')].map(c => c.value).join(', '),
+      ingredients: formZutaten.filter(z => z.name),
+      steps: formSchritte.filter(s => s.trim()),
     };
     if (editingId) {
       await updateDoc(doc(db, 'rezepte', editingId), data);
