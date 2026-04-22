@@ -1,79 +1,887 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Familien-Kochbuch</title>
-    <style>
-        :root { --primary: #E85D4A; --bg: #f8f9fa; }
-        body { font-family: sans-serif; margin: 0; background: var(--bg); padding-bottom: 80px; }
-        header { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); sticky; top:0; z-index:10; }
-        .app-main { padding: 15px; max-width: 500px; margin: 0 auto; }
-        .filter-bar { display: flex; gap: 8px; margin-bottom: 15px; }
-        .filter-btn { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ddd; background: white; cursor: pointer; }
-        .filter-btn.active { background: var(--primary); color: white; border: none; }
-        .search-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
-        .recipes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
-        .recipe-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .recipe-card img { width: 100%; height: 100px; object-fit: cover; }
-        .recipe-card h3 { margin: 8px; font-size: 0.9rem; }
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: flex-end; }
-        .hidden { display: none !important; }
-        .sheet { background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; box-sizing: border-box; }
-        .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--primary); color: white; border: none; font-size: 30px; }
-        .planner-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Familien-Kochbuch 🍳</title>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCp7M97mA2gbkevQNni_6RIo6XNpLJLOgc",
+    authDomain: "familien-kochbuch-56de6.firebaseapp.com",
+    projectId: "familien-kochbuch-56de6",
+    storageBucket: "familien-kochbuch-56de6.firebasestorage.app",
+    messagingSenderId: "138685113816",
+    appId: "1:138685113816:web:574ed7eb20ca5cabad7ead"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // ─── State ───────────────────────────────────────────────
+  let allRecipes = [];
+  let activeFilter = 'alle';
+  let currentRecipe = null;
+  let portionMultiplier = 1;
+  let shoppingList = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+  let weekPlan = JSON.parse(localStorage.getItem('weekPlan') || '{}');
+  const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+  // ─── Firebase Listener ───────────────────────────────────
+  const q = query(collection(db, 'rezepte'), orderBy('name'));
+  onSnapshot(q, (snapshot) => {
+    allRecipes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderRecipes();
+    renderWeekPlan();
+  });
+
+  // ─── Render Recipes ──────────────────────────────────────
+  function renderRecipes() {
+    const grid = document.getElementById('recipeGrid');
+    const filtered = activeFilter === 'alle'
+      ? allRecipes
+      : allRecipes.filter(r => r.kategorien && r.kategorien.includes(activeFilter));
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty-state">🍽️<br>Noch keine Rezepte.<br>Tippe auf <strong>+</strong> um loszulegen!</div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(r => `
+      <div class="recipe-card" onclick="openRecipe('${r.id}')">
+        <div class="recipe-emoji">${r.emoji || '🍳'}</div>
+        <div class="recipe-info">
+          <div class="recipe-name">${r.name}</div>
+          <div class="recipe-meta">
+            ${r.dauer ? `⏱ ${r.dauer} Min` : ''}
+            ${r.portionen ? `· 👤 ${r.portionen}` : ''}
+          </div>
+          <div class="recipe-tags">
+            ${(r.kategorien || []).map(k => `<span class="tag">${k}</span>`).join('')}
+          </div>
+        </div>
+        <div class="recipe-actions" onclick="event.stopPropagation()">
+          <button class="btn-icon" onclick="editRecipe('${r.id}')">✏️</button>
+          <button class="btn-icon danger" onclick="deleteRecipe('${r.id}', '${r.name}')">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ─── Open Recipe Detail ──────────────────────────────────
+  window.openRecipe = function(id) {
+    currentRecipe = allRecipes.find(r => r.id === id);
+    if (!currentRecipe) return;
+    portionMultiplier = 1;
+    renderDetail();
+    document.getElementById('detailModal').classList.add('open');
+  }
+
+  function renderDetail() {
+    const r = currentRecipe;
+    document.getElementById('detailEmoji').textContent = r.emoji || '🍳';
+    document.getElementById('detailName').textContent = r.name;
+    document.getElementById('detailMeta').textContent = [
+      r.dauer ? `⏱ ${r.dauer} Min` : '',
+      r.portionen ? `👤 ${r.portionen * portionMultiplier} Portionen` : ''
+    ].filter(Boolean).join('  ·  ');
+    document.getElementById('portionCount').textContent = r.portionen ? r.portionen * portionMultiplier : 1;
+
+    // Ingredients
+    const ingList = document.getElementById('ingredientsList');
+    if (r.zutaten && r.zutaten.length > 0) {
+      ingList.innerHTML = r.zutaten.map((z, i) => {
+        const menge = z.menge ? `<strong>${(z.menge * portionMultiplier).toFixed(z.menge % 1 === 0 ? 0 : 1)} ${z.einheit || ''}</strong>` : '';
+        return `<li class="ingredient-item">
+          <label>
+            <input type="checkbox" onchange="toggleShopping(${i})">
+            ${menge} ${z.name}
+          </label>
+        </li>`;
+      }).join('');
+    } else {
+      ingList.innerHTML = '<li class="no-content">Keine Zutaten eingetragen</li>';
+    }
+
+    // Steps
+    const stepsList = document.getElementById('stepsList');
+    if (r.schritte && r.schritte.length > 0) {
+      stepsList.innerHTML = r.schritte.map((s, i) => `
+        <li class="step-item">
+          <span class="step-num">${i+1}</span>
+          <span>${s}</span>
+        </li>
+      `).join('');
+    } else {
+      stepsList.innerHTML = '<li class="no-content">Keine Schritte eingetragen</li>';
+    }
+  }
+
+  window.changePortion = function(delta) {
+    const r = currentRecipe;
+    const base = r.portionen || 1;
+    const current = base * portionMultiplier;
+    const next = current + delta;
+    if (next < 1) return;
+    portionMultiplier = next / base;
+    renderDetail();
+  }
+
+  window.toggleShopping = function(idx) {
+    const r = currentRecipe;
+    const z = r.zutaten[idx];
+    const item = `${(z.menge * portionMultiplier).toFixed(z.menge % 1 === 0 ? 0 : 1)} ${z.einheit || ''} ${z.name}`.trim();
+    const exists = shoppingList.indexOf(item);
+    if (exists >= 0) shoppingList.splice(exists, 1);
+    else shoppingList.push(item);
+    localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+    renderShopping();
+  }
+
+  // ─── Delete Recipe ───────────────────────────────────────
+  window.deleteRecipe = async function(id, name) {
+    if (!confirm(`"${name}" wirklich löschen?`)) return;
+    await deleteDoc(doc(db, 'rezepte', id));
+  }
+
+  // ─── Filter ──────────────────────────────────────────────
+  window.setFilter = function(f) {
+    activeFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+    renderRecipes();
+  }
+
+  // ─── Glücksrad ───────────────────────────────────────────
+  window.spinWheel = function() {
+    const filtered = activeFilter === 'alle'
+      ? allRecipes
+      : allRecipes.filter(r => r.kategorien && r.kategorien.includes(activeFilter));
+    if (filtered.length === 0) { alert('Keine Rezepte für diesen Filter!'); return; }
+    const winner = filtered[Math.floor(Math.random() * filtered.length)];
+    const el = document.getElementById('wheelResult');
+    el.innerHTML = `<div class="wheel-winner">${winner.emoji || '🍳'} ${winner.name}</div>`;
+    el.classList.add('pop');
+    setTimeout(() => el.classList.remove('pop'), 400);
+  }
+
+  // ─── Week Plan ───────────────────────────────────────────
+  function renderWeekPlan() {
+    const grid = document.getElementById('weekGrid');
+    grid.innerHTML = DAYS.map(day => {
+      const rid = weekPlan[day];
+      const r = rid ? allRecipes.find(x => x.id === rid) : null;
+      return `<div class="week-day">
+        <div class="week-day-label">${day}</div>
+        <div class="week-slot ${r ? 'filled' : ''}" onclick="pickForDay('${day}')">
+          ${r ? `<span>${r.emoji || '🍳'} ${r.name}</span><button onclick="event.stopPropagation();clearDay('${day}')">✕</button>` : '<span class="add-day">+ Rezept</span>'}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window.pickForDay = function(day) {
+    const modal = document.getElementById('dayPickerModal');
+    document.getElementById('dayPickerTitle').textContent = `Rezept für ${day}`;
+    const list = document.getElementById('dayPickerList');
+    list.innerHTML = allRecipes.map(r => `
+      <div class="picker-item" onclick="assignDay('${day}','${r.id}')">
+        ${r.emoji || '🍳'} ${r.name}
+      </div>
+    `).join('');
+    modal.classList.add('open');
+  }
+
+  window.assignDay = function(day, rid) {
+    weekPlan[day] = rid;
+    localStorage.setItem('weekPlan', JSON.stringify(weekPlan));
+    document.getElementById('dayPickerModal').classList.remove('open');
+    renderWeekPlan();
+  }
+
+  window.clearDay = function(day) {
+    delete weekPlan[day];
+    localStorage.setItem('weekPlan', JSON.stringify(weekPlan));
+    renderWeekPlan();
+  }
+
+  // ─── Shopping List ───────────────────────────────────────
+  function renderShopping() {
+    const list = document.getElementById('shoppingItems');
+    if (shoppingList.length === 0) {
+      list.innerHTML = '<div class="empty-state">🛒 Noch nichts auf der Liste</div>';
+      return;
+    }
+    list.innerHTML = shoppingList.map((item, i) => `
+      <div class="shopping-item">
+        <span>${item}</span>
+        <button class="btn-icon danger" onclick="removeShoppingItem(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  window.removeShoppingItem = function(i) {
+    shoppingList.splice(i, 1);
+    localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+    renderShopping();
+  }
+
+  window.clearShopping = function() {
+    if (!confirm('Einkaufsliste leeren?')) return;
+    shoppingList = [];
+    localStorage.setItem('shoppingList', JSON.stringify(shoppingList));
+    renderShopping();
+  }
+
+  // ─── Recipe Form ─────────────────────────────────────────
+  let editingId = null;
+  let formZutaten = [];
+  let formSchritte = [];
+
+  window.openNewRecipe = function() {
+    editingId = null;
+    formZutaten = [];
+    formSchritte = [];
+    document.getElementById('formTitle').textContent = 'Neues Rezept';
+    document.getElementById('recipeName').value = '';
+    document.getElementById('recipeEmoji').value = '🍳';
+    document.getElementById('recipeDauer').value = '';
+    document.getElementById('recipePortionen').value = '4';
+    document.getElementById('recipeNotizen').value = '';
+    document.querySelectorAll('.kat-checkbox').forEach(c => c.checked = false);
+    renderFormZutaten();
+    renderFormSchritte();
+    document.getElementById('formModal').classList.add('open');
+  }
+
+  window.editRecipe = function(id) {
+    const r = allRecipes.find(x => x.id === id);
+    if (!r) return;
+    editingId = id;
+    formZutaten = (r.zutaten || []).map(z => ({...z}));
+    formSchritte = [...(r.schritte || [])];
+    document.getElementById('formTitle').textContent = 'Rezept bearbeiten';
+    document.getElementById('recipeName').value = r.name || '';
+    document.getElementById('recipeEmoji').value = r.emoji || '🍳';
+    document.getElementById('recipeDauer').value = r.dauer || '';
+    document.getElementById('recipePortionen').value = r.portionen || 4;
+    document.getElementById('recipeNotizen').value = r.notizen || '';
+    document.querySelectorAll('.kat-checkbox').forEach(c => {
+      c.checked = (r.kategorien || []).includes(c.value);
+    });
+    renderFormZutaten();
+    renderFormSchritte();
+    document.getElementById('formModal').classList.add('open');
+  }
+
+  function renderFormZutaten() {
+    const c = document.getElementById('zutatenContainer');
+    c.innerHTML = formZutaten.map((z, i) => `
+      <div class="form-row">
+        <input type="number" placeholder="Menge" value="${z.menge || ''}" oninput="formZutaten[${i}].menge=parseFloat(this.value)||0" style="width:70px">
+        <input type="text" placeholder="Einheit" value="${z.einheit || ''}" oninput="formZutaten[${i}].einheit=this.value" style="width:70px">
+        <input type="text" placeholder="Zutat" value="${z.name || ''}" oninput="formZutaten[${i}].name=this.value" style="flex:1">
+        <button class="btn-icon danger" onclick="removeZutat(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  window.addZutat = function() {
+    formZutaten.push({ menge: 0, einheit: '', name: '' });
+    renderFormZutaten();
+  }
+
+  window.removeZutat = function(i) {
+    formZutaten.splice(i, 1);
+    renderFormZutaten();
+  }
+
+  function renderFormSchritte() {
+    const c = document.getElementById('schritteContainer');
+    c.innerHTML = formSchritte.map((s, i) => `
+      <div class="form-row">
+        <span class="step-num">${i+1}</span>
+        <textarea oninput="formSchritte[${i}]=this.value" style="flex:1;min-height:60px">${s}</textarea>
+        <button class="btn-icon danger" onclick="removeSchritt(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  window.addSchritt = function() {
+    formSchritte.push('');
+    renderFormSchritte();
+  }
+
+  window.removeSchritt = function(i) {
+    formSchritte.splice(i, 1);
+    renderFormSchritte();
+  }
+
+  window.saveRecipe = async function() {
+    const name = document.getElementById('recipeName').value.trim();
+    if (!name) { alert('Bitte einen Namen eingeben!'); return; }
+    const kategorien = [...document.querySelectorAll('.kat-checkbox:checked')].map(c => c.value);
+    const data = {
+      name,
+      emoji: document.getElementById('recipeEmoji').value || '🍳',
+      dauer: parseInt(document.getElementById('recipeDauer').value) || 0,
+      portionen: parseInt(document.getElementById('recipePortionen').value) || 4,
+      notizen: document.getElementById('recipeNotizen').value.trim(),
+      kategorien,
+      zutaten: formZutaten.filter(z => z.name),
+      schritte: formSchritte.filter(s => s.trim()),
+    };
+    if (editingId) {
+      await updateDoc(doc(db, 'rezepte', editingId), data);
+    } else {
+      await addDoc(collection(db, 'rezepte'), data);
+    }
+    document.getElementById('formModal').classList.remove('open');
+  }
+
+  // ─── Tab Navigation ──────────────────────────────────────
+  window.showTab = function(tab) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    if (tab === 'shopping') renderShopping();
+    if (tab === 'week') renderWeekPlan();
+  }
+
+  // ─── Close Modals ─────────────────────────────────────────
+  window.closeModal = function(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // Initial render
+  renderShopping();
+</script>
+
+<style>
+  /* ── Reset & Variables ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #fdf6ee;
+    --surface: #fff9f2;
+    --card: #ffffff;
+    --primary: #d4622a;
+    --primary-light: #f5845a;
+    --accent: #f0a500;
+    --text: #2c1a0e;
+    --text-muted: #8a6a52;
+    --border: #e8d5c0;
+    --shadow: 0 2px 12px rgba(180,100,40,0.10);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font: 'Georgia', serif;
+    --font-ui: system-ui, -apple-system, sans-serif;
+  }
+
+  html, body {
+    height: 100%; width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    overflow: hidden;
+  }
+
+  /* ── App Shell ─────────────────────────────────────── */
+  #app {
+    display: flex; flex-direction: column;
+    height: 100dvh; width: 100%;
+    max-width: 480px; margin: 0 auto;
+    background: var(--surface);
+    box-shadow: 0 0 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Header ────────────────────────────────────────── */
+  .app-header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .app-title {
+    font-family: var(--font);
+    font-size: 22px;
+    font-weight: normal;
+    letter-spacing: 0.5px;
+  }
+  .app-title span { opacity: 0.85; font-size: 18px; }
+
+  /* ── Tabs Content ──────────────────────────────────── */
+  .tabs-wrapper {
+    flex: 1; overflow: hidden; position: relative;
+  }
+  .tab-content {
+    display: none;
+    height: 100%; overflow-y: auto;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-content.active { display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Bottom Nav ────────────────────────────────────── */
+  .bottom-nav {
+    display: flex;
+    background: white;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    flex: 1; border: none; background: none;
+    padding: 10px 4px 8px;
+    font-size: 10px; color: var(--text-muted);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    cursor: pointer; transition: color 0.2s;
+  }
+  .nav-btn .icon { font-size: 22px; }
+  .nav-btn.active { color: var(--primary); }
+  .nav-btn.active .icon { transform: scale(1.1); }
+
+  /* ── Filter Bar ────────────────────────────────────── */
+  .filter-bar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .filter-btn {
+    border: 1.5px solid var(--border);
+    background: white; color: var(--text-muted);
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 13px; cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .filter-btn.active {
+    background: var(--primary); color: white; border-color: var(--primary);
+  }
+
+  /* ── Recipe Cards ──────────────────────────────────── */
+  .recipe-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+    display: flex; align-items: center; gap: 14px;
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+    border: 1px solid var(--border);
+  }
+  .recipe-card:active { transform: scale(0.98); box-shadow: none; }
+  .recipe-emoji { font-size: 36px; flex-shrink: 0; }
+  .recipe-info { flex: 1; min-width: 0; }
+  .recipe-name { font-weight: 600; font-size: 16px; margin-bottom: 3px; }
+  .recipe-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .recipe-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag {
+    background: #fde8d8; color: var(--primary);
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  }
+  .recipe-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+
+  /* ── Buttons ───────────────────────────────────────── */
+  .btn-icon {
+    border: none; background: #f5ebe0; color: var(--text-muted);
+    width: 34px; height: 34px; border-radius: 10px;
+    font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .btn-icon.danger { background: #fde8e8; color: #c0392b; }
+  .btn-icon:active { transform: scale(0.9); }
+
+  .btn-fab {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--primary); color: white;
+    border: none; font-size: 26px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(212,98,42,0.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-fab:active { transform: scale(0.92); }
+
+  .btn-primary {
+    background: var(--primary); color: white;
+    border: none; padding: 14px 28px; border-radius: var(--radius-sm);
+    font-size: 16px; font-weight: 600; cursor: pointer; width: 100%;
+    transition: background 0.2s;
+  }
+  .btn-primary:active { background: #b8501f; }
+
+  .btn-secondary {
+    background: var(--border); color: var(--text);
+    border: none; padding: 14px 28px; border-radius: var(--radius-sm);
+    font-size: 16px; cursor: pointer; width: 100%;
+  }
+
+  /* ── Glücksrad Tab ─────────────────────────────────── */
+  .wheel-section {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 24px;
+    flex: 1; padding: 20px;
+    text-align: center;
+  }
+  .wheel-big { font-size: 100px; line-height: 1; }
+  .wheel-hint { color: var(--text-muted); font-size: 15px; }
+  .wheel-btn {
+    background: var(--primary); color: white;
+    border: none; padding: 18px 40px; border-radius: 50px;
+    font-size: 20px; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(212,98,42,0.35);
+    transition: transform 0.15s;
+  }
+  .wheel-btn:active { transform: scale(0.95); }
+  .wheel-result { min-height: 60px; }
+  .wheel-winner {
+    font-size: 22px; font-weight: 700;
+    color: var(--primary);
+    animation: pop 0.3s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop { animation: pop 0.3s ease; }
+
+  /* ── Week Plan ─────────────────────────────────────── */
+  .week-grid { display: flex; flex-direction: column; gap: 8px; }
+  .week-day { display: flex; align-items: center; gap: 10px; }
+  .week-day-label {
+    width: 30px; font-weight: 700; font-size: 13px;
+    color: var(--text-muted); flex-shrink: 0; text-align: center;
+  }
+  .week-slot {
+    flex: 1; min-height: 48px;
+    background: var(--card); border: 1.5px dashed var(--border);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; font-size: 14px; transition: border-color 0.2s;
+  }
+  .week-slot.filled { border-style: solid; border-color: var(--primary); background: #fff4ed; }
+  .add-day { color: var(--text-muted); font-size: 13px; }
+  .week-slot button {
+    border: none; background: none; color: var(--text-muted);
+    font-size: 16px; cursor: pointer; padding: 4px;
+  }
+
+  /* ── Shopping List ─────────────────────────────────── */
+  .shopping-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card); padding: 14px 16px;
+    border-radius: var(--radius-sm); border: 1px solid var(--border);
+    font-size: 15px;
+  }
+
+  /* ── Modal ─────────────────────────────────────────── */
+  .modal {
+    position: fixed; inset: 0; z-index: 100;
+    display: none; flex-direction: column;
+    background: rgba(0,0,0,0.5);
+  }
+  .modal.open { display: flex; }
+  .modal-sheet {
+    margin-top: auto;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    max-height: 90dvh;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 20px; font-weight: 700; }
+  .modal-close {
+    border: none; background: var(--border); color: var(--text);
+    width: 32px; height: 32px; border-radius: 50%; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Detail Modal ──────────────────────────────────── */
+  .detail-hero { text-align: center; padding: 10px 0 4px; }
+  .detail-emoji { font-size: 72px; line-height: 1; }
+  .detail-name { font-family: var(--font); font-size: 26px; margin-top: 8px; }
+  .detail-meta { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+
+  .portion-control {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    background: var(--card); padding: 12px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .portion-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: none; background: var(--primary); color: white;
+    font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .portion-count { font-size: 18px; font-weight: 700; min-width: 30px; text-align: center; }
+  .portion-label { color: var(--text-muted); font-size: 13px; }
+
+  .section-label {
+    font-weight: 700; font-size: 14px;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); margin-top: 4px;
+  }
+
+  .ingredient-item, .step-item {
+    list-style: none;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 15px;
+  }
+  .ingredient-item label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .ingredient-item input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--primary); }
+  .step-num {
+    min-width: 26px; height: 26px; border-radius: 50%;
+    background: var(--primary); color: white;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  ul { list-style: none; }
+  .no-content { color: var(--text-muted); font-style: italic; padding: 10px 0; }
+
+  /* ── Form ──────────────────────────────────────────── */
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  input[type=text], input[type=number], textarea, select {
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; font-size: 15px; background: white;
+    color: var(--text); width: 100%; outline: none;
+    transition: border-color 0.2s;
+    font-family: var(--font-ui);
+  }
+  input:focus, textarea:focus { border-color: var(--primary); }
+
+  .form-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .form-row input, .form-row textarea { flex: 1; width: auto; }
+
+  .kat-checks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .kat-label {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--card); border: 1.5px solid var(--border);
+    padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 14px;
+    transition: all 0.2s;
+  }
+  .kat-label:has(input:checked) { background: #fde8d8; border-color: var(--primary); color: var(--primary); }
+  .kat-checkbox { display: none; }
+
+  .add-btn {
+    border: 1.5px dashed var(--border); background: none;
+    color: var(--text-muted); padding: 10px; border-radius: var(--radius-sm);
+    font-size: 14px; cursor: pointer; width: 100%; transition: all 0.2s;
+  }
+  .add-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ── Day Picker ────────────────────────────────────── */
+  .picker-item {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-size: 16px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .picker-item:active { background: #fde8d8; }
+
+  /* ── Empty State ───────────────────────────────────── */
+  .empty-state {
+    text-align: center; color: var(--text-muted);
+    padding: 40px 20px; font-size: 15px; line-height: 1.8;
+  }
+
+  /* ── Header Row ────────────────────────────────────── */
+  .tab-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .tab-title {
+    font-family: var(--font); font-size: 20px; font-weight: normal;
+    color: var(--text);
+  }
+</style>
 </head>
 <body>
-    <header>
-        <h2 style="margin:0; color:var(--primary);">Kochbuch</h2>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="app-title">🍳 Familien-Kochbuch</div>
+  </header>
+
+  <!-- ── Tab Contents ── -->
+  <div class="tabs-wrapper">
+
+    <!-- Rezepte Tab -->
+    <div class="tab-content active" id="tab-rezepte">
+      <div class="tab-header">
+        <div class="tab-title">Unsere Rezepte</div>
+        <button class="btn-fab" onclick="openNewRecipe()">+</button>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="alle" onclick="setFilter('alle')">Alle</button>
+        <button class="filter-btn" data-filter="Phil" onclick="setFilter('Phil')">👦 Phil</button>
+        <button class="filter-btn" data-filter="Zusammen" onclick="setFilter('Zusammen')">👨‍👩‍👦 Zusammen</button>
+        <button class="filter-btn" data-filter="Schnell (< 30 Min)" onclick="setFilter('Schnell (< 30 Min)')">⚡ Schnell</button>
+        <button class="filter-btn" data-filter="Vegetarisch" onclick="setFilter('Vegetarisch')">🥦 Vegetarisch</button>
+      </div>
+      <div id="recipeGrid"></div>
+    </div>
+
+    <!-- Wochenplan Tab -->
+    <div class="tab-content" id="tab-week">
+      <div class="tab-title">Wochenplan</div>
+      <div class="week-grid" id="weekGrid"></div>
+    </div>
+
+    <!-- Glücksrad Tab -->
+    <div class="tab-content" id="tab-wheel">
+      <div class="wheel-section">
+        <div class="wheel-big">🎲</div>
         <div>
-            <button onclick="showPlanner()" style="font-size:24px; background:none; border:none;">📅</button>
+          <div style="font-size:20px;font-weight:700;margin-bottom:6px">Was kochen wir heute?</div>
+          <div class="wheel-hint">Aktiver Filter wird berücksichtigt</div>
         </div>
-    </header>
-
-    <main class="app-main">
-        <div class="filter-bar">
-            <button class="filter-btn active" data-filter="all">Alle</button>
-            <button class="filter-btn" data-filter="Phil">Phil</button>
-            <button class="filter-btn" data-filter="Zusammen">Zusammen</button>
-        </div>
-        <input type="search" id="searchInput" class="search-input" placeholder="Suchen..." />
-        <button id="randomBtn" style="width:100%; margin-top:10px; padding:10px; border-radius:10px; border:1px solid #ddd; background:white;">🎲 Zufalls-Rezept</button>
-        <div id="recipesGrid" class="recipes-grid"></div>
-    </main>
-
-    <button class="fab" id="fabBtn">+</button>
-
-    <div id="plannerOverlay" class="overlay hidden">
-        <div class="sheet">
-            <div style="display:flex; justify-content:space-between;"><h2>Wochenplan</h2><button onclick="closeAll()" style="font-size:24px; border:none; background:none;">✕</button></div>
-            <div id="plannerDisplay"></div>
-            <button id="clearPlannerBtn" style="width:100%; margin-top:20px; padding:10px;">Plan leeren</button>
-        </div>
+        <button class="wheel-btn" onclick="spinWheel()">🍀 Überrasch mich!</button>
+        <div class="wheel-result" id="wheelResult"></div>
+      </div>
     </div>
 
-    <div id="recipeOverlay" class="overlay hidden">
-        <div class="sheet" style="padding:0;">
-            <img id="detailImage" style="width:100%; height:200px; object-fit:cover;">
-            <div style="padding:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <h2 id="detailTitle" style="margin:0;"></h2>
-                    <button onclick="closeAll()" style="font-size:24px; border:none; background:none;">✕</button>
-                </div>
-                <div style="margin-top:15px; background:#f0f0f0; padding:10px; border-radius:10px;">
-                    <strong>Planen für:</strong>
-                    <select id="daySelector"><option value="Mo">Mo</option><option value="Di">Di</option><option value="Mi">Mi</option><option value="Do">Do</option><option value="Fr">Fr</option><option value="Sa">Sa</option><option value="So">So</option></select>
-                    <button id="addToPlannerBtn">OK</button>
-                </div>
-                <div id="detailContent"></div>
-                <button id="deleteBtn" style="color:red; margin-top:20px; border:none; background:none;">🗑️ Rezept löschen</button>
-            </div>
-        </div>
+    <!-- Einkaufsliste Tab -->
+    <div class="tab-content" id="tab-shopping">
+      <div class="tab-header">
+        <div class="tab-title">🛒 Einkaufsliste</div>
+        <button class="btn-icon danger" onclick="clearShopping()">🗑️</button>
+      </div>
+      <div id="shoppingItems"></div>
+      <div style="color:var(--text-muted);font-size:13px;text-align:center;margin-top:8px">
+        Zutaten hinzufügen: Rezept öffnen → Zutat anhaken
+      </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="app.js"></script>
+  </div>
+
+  <!-- ── Bottom Navigation ── -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="rezepte" onclick="showTab('rezepte')">
+      <span class="icon">📖</span>Rezepte
+    </button>
+    <button class="nav-btn" data-tab="week" onclick="showTab('week')">
+      <span class="icon">📅</span>Wochenplan
+    </button>
+    <button class="nav-btn" data-tab="wheel" onclick="showTab('wheel')">
+      <span class="icon">🎲</span>Glücksrad
+    </button>
+    <button class="nav-btn" data-tab="shopping" onclick="showTab('shopping')">
+      <span class="icon">🛒</span>Einkauf
+    </button>
+  </nav>
+
+</div>
+
+<!-- ── Recipe Detail Modal ── -->
+<div class="modal" id="detailModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <span></span>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="detail-hero">
+      <div class="detail-emoji" id="detailEmoji">🍳</div>
+      <div class="detail-name" id="detailName"></div>
+      <div class="detail-meta" id="detailMeta"></div>
+    </div>
+    <div class="portion-control">
+      <button class="portion-btn" onclick="changePortion(-1)">−</button>
+      <div>
+        <div class="portion-count" id="portionCount">4</div>
+        <div class="portion-label">Portionen</div>
+      </div>
+      <button class="portion-btn" onclick="changePortion(1)">+</button>
+    </div>
+    <div class="section-label">🥕 Zutaten</div>
+    <ul id="ingredientsList"></ul>
+    <div class="section-label">👨‍🍳 Zubereitung</div>
+    <ul id="stepsList"></ul>
+  </div>
+</div>
+
+<!-- ── Recipe Form Modal ── -->
+<div class="modal" id="formModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <div class="modal-title" id="formTitle">Neues Rezept</div>
+      <button class="modal-close" onclick="closeModal('formModal')">✕</button>
+    </div>
+
+    <div class="form-group">
+      <div class="form-label">Name</div>
+      <input type="text" id="recipeName" placeholder="z.B. Spaghetti Bolognese">
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <div class="form-group" style="flex:0 0 80px">
+        <div class="form-label">Emoji</div>
+        <input type="text" id="recipeEmoji" value="🍳" style="text-align:center;font-size:24px">
+      </div>
+      <div class="form-group" style="flex:1">
+        <div class="form-label">⏱ Dauer (Min)</div>
+        <input type="number" id="recipeDauer" placeholder="30">
+      </div>
+      <div class="form-group" style="flex:1">
+        <div class="form-label">👤 Portionen</div>
+        <input type="number" id="recipePortionen" value="4">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="form-label">Kategorien</div>
+      <div class="kat-checks">
+        <label class="kat-label"><input type="checkbox" class="kat-checkbox" value="Phil">👦 Phil</label>
+        <label class="kat-label"><input type="checkbox" class="kat-checkbox" value="Zusammen">👨‍👩‍👦 Zusammen</label>
+        <label class="kat-label"><input type="checkbox" class="kat-checkbox" value="Schnell (< 30 Min)">⚡ Schnell</label>
+        <label class="kat-label"><input type="checkbox" class="kat-checkbox" value="Vegetarisch">🥦 Vegetarisch</label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="form-label">🥕 Zutaten</div>
+      <div id="zutatenContainer"></div>
+      <button class="add-btn" onclick="addZutat()">+ Zutat hinzufügen</button>
+    </div>
+
+    <div class="form-group">
+      <div class="form-label">👨‍🍳 Zubereitungsschritte</div>
+      <div id="schritteContainer"></div>
+      <button class="add-btn" onclick="addSchritt()">+ Schritt hinzufügen</button>
+    </div>
+
+    <div class="form-group">
+      <div class="form-label">📝 Notizen</div>
+      <textarea id="recipeNotizen" placeholder="Tipps, Variationen..." rows="3"></textarea>
+    </div>
+
+    <button class="btn-primary" onclick="saveRecipe()">💾 Speichern</button>
+    <button class="btn-secondary" onclick="closeModal('formModal')">Abbrechen</button>
+  </div>
+</div>
+
+<!-- ── Day Picker Modal ── -->
+<div class="modal" id="dayPickerModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <div class="modal-title" id="dayPickerTitle">Rezept wählen</div>
+      <button class="modal-close" onclick="closeModal('dayPickerModal')">✕</button>
+    </div>
+    <div id="dayPickerList"></div>
+  </div>
+</div>
+
 </body>
 </html>
