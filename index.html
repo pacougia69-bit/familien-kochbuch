@@ -7,19 +7,22 @@
     <title>Familien-Kochbuch</title>
     <link rel="stylesheet" href="style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      /* Reparatur-Styles direkt hier, falls style.css zickt */
+      .header-actions { display: flex; gap: 15px; align-items: center; }
+      .icon-btn { font-size: 24px; background: none; border: none; cursor: pointer; padding: 5px; }
+      .planner-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+      .planner-row:last-child { border-bottom: none; }
+      .hidden { display: none !important; }
+    </style>
 </head>
   <body>
     <header class="app-header">
-      <div class="header-inner">
-        <div class="header-brand">
-          <h1 class="brand-title">Kochbuch</h1>
-        </div>
+      <div class="header-inner" style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+        <h1 class="brand-title" style="margin: 0;">Kochbuch</h1>
         <div class="header-actions">
-          <button class="icon-btn" id="openPlannerBtn" aria-label="Wochenplan">📅</button>
-          <button class="cart-btn" id="cartBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-            <span class="cart-badge hidden" id="cartBadge">0</span>
-          </button>
+          <button class="icon-btn" id="openPlannerBtn">📅</button>
+          <button class="icon-btn" id="cartBtn">🛒</button>
         </div>
       </div>
     </header>
@@ -32,58 +35,55 @@
       </div>
 
       <div class="search-section">
-        <input type="search" id="searchInput" class="search-input" placeholder="Was kochen wir?" />
-        <button id="randomBtn" class="random-dice-btn">🎲 Was kochen wir heute?</button>
+        <input type="search" id="searchInput" class="search-input" placeholder="Rezept suchen..." />
+        <button id="randomBtn" style="width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; border: 1px solid #ddd; background: white; font-weight: bold; cursor: pointer;">🎲 Was kochen wir heute?</button>
       </div>
 
       <div class="results-info" id="resultsInfo"></div>
       <div class="recipes-grid" id="recipesGrid"></div>
     </main>
 
-    <button class="fab" id="fabBtn">+</button>
+    <button class="fab" id="fabBtn" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: #E85D4A; color: white; border: none; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">+</button>
 
-    <div class="overlay hidden" id="plannerOverlay">
-      <div class="overlay-backdrop"></div>
-      <div class="overlay-sheet">
-        <div class="panel-header">
+    <div class="overlay hidden" id="plannerOverlay" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end;">
+      <div style="background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
           <h2>Wochenplan</h2>
-          <button class="close-overlay">✕</button>
+          <button class="close-overlay" style="font-size: 24px; border: none; background: none;">✕</button>
         </div>
-        <div class="panel-scroll" id="plannerDisplay">
-          </div>
-        <button id="clearPlannerBtn" class="btn-secondary">Plan leeren</button>
+        <div id="plannerDisplay"></div>
+        <button id="clearPlannerBtn" style="width: 100%; margin-top: 20px; padding: 10px; color: #888; border: none; background: #eee; border-radius: 10px;">Plan leeren</button>
       </div>
     </div>
 
-    <div class="overlay hidden" id="recipeOverlay">
-      <div class="overlay-backdrop"></div>
-      <div class="overlay-sheet">
-        <div class="recipe-hero">
-          <img id="detailImage" src="" />
-          <button class="close-overlay">✕</button>
+    <div class="overlay hidden" id="recipeOverlay" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end;">
+      <div style="background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 0; max-height: 90vh; overflow-y: auto;">
+        <div style="position: relative;">
+          <img id="detailImage" src="" style="width: 100%; height: 250px; object-fit: cover;" />
+          <button class="close-overlay" style="position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 40px; height: 40px; border: none; font-size: 20px;">✕</button>
         </div>
-        <div class="panel-scroll">
-          <h2 id="detailTitle"></h2>
+        <div style="padding: 20px;">
+          <h2 id="detailTitle" style="margin-top: 0;"></h2>
           
-          <div class="planner-add-box">
-            <select id="daySelector">
-              <option value="">Tag wählen...</option>
-              <option value="Mo">Montag</option><option value="Di">Dienstag</option>
-              <option value="Mi">Mittwoch</option><option value="Do">Donnerstag</option>
-              <option value="Fr">Freitag</option><option value="Sa">Samstag</option>
-              <option value="So">Sonntag</option>
-            </select>
-            <button id="addToPlannerBtn">Einplanen</button>
+          <div style="background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+            <p style="margin: 0 0 10px 0; font-weight: bold;">In die Woche planen:</p>
+            <div style="display: flex; gap: 10px;">
+              <select id="daySelector" style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ddd;">
+                <option value="">Tag wählen...</option>
+                <option value="Mo">Montag</option><option value="Di">Dienstag</option>
+                <option value="Mi">Mittwoch</option><option value="Do">Donnerstag</option>
+                <option value="Fr">Freitag</option><option value="Sa">Samstag</option>
+                <option value="So">Sonntag</option>
+              </select>
+              <button id="addToPlannerBtn" style="background: #E85D4A; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold;">OK</button>
+            </div>
           </div>
 
-          <div class="portions-calc">
-            <span>Portionen:</span>
-            <button id="portionsMinus">−</button>
-            <span id="portionsCount">4</span>
-            <button id="portionsPlus">+</button>
-          </div>
+          <h3>Zutaten (<span id="portionsCount">4</span> Port.)</h3>
           <ul id="detailIngredients"></ul>
+          <h3>Zubereitung</h3>
           <ol id="detailSteps"></ol>
+          <div style="height: 50px;"></div>
         </div>
       </div>
     </div>
