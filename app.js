@@ -1,7 +1,3 @@
-/* ============================================================
-   FAMILIEN-KOCHBUCH — Firebase Version (Mit neuen Rezepten)
-   ============================================================ */
-
 const firebaseConfig = {
   apiKey: "AIzaSyCp7M97mA2gbkevQNni_6RIo6XNpLJLOgc",
   authDomain: "familien-kochbuch-56de6.firebaseapp.com",
@@ -19,7 +15,6 @@ const state = {
   filtered: [],
   activeFilter: 'all',
   searchQuery: '',
-  timeFilter: false,
   currentRecipe: null,
   currentPortions: 4,
   shoppingItems: []
@@ -31,7 +26,7 @@ const dom = {
   emptyState: $('emptyState'),
   resultsInfo: $('resultsInfo'),
   searchInput: $('searchInput'),
-  timeFilter30: $('timeFilter30'),
+  randomBtn: $('randomBtn'),
   cartBtn: $('cartBtn'),
   cartBadge: $('cartBadge'),
   fabBtn: $('fabBtn'),
@@ -45,7 +40,6 @@ const dom = {
   portionsMinus: $('portionsMinus'),
   portionsPlus: $('portionsPlus'),
   portionsCount: $('portionsCount'),
-  addToCartBtn: $('addToCartBtn'),
   detailIngredients: $('detailIngredients'),
   detailSteps: $('detailSteps'),
   addRecipeOverlay: $('addRecipeOverlay'),
@@ -54,105 +48,67 @@ const dom = {
   stepsBuilder: $('stepsBuilder'),
   addIngredientBtn: $('addIngredientBtn'),
   addStepBtn: $('addStepBtn'),
-  shoppingOverlay: $('shoppingOverlay'),
-  shoppingItems: $('shoppingItems'),
-  closeShoppingBtn: $('closeShoppingBtn'),
-  shoppingEmpty: $('shoppingEmpty'),
-  clearListBtn: $('clearListBtn')
+  closeAddRecipeBtn: $('closeAddRecipeBtn')
 };
 
 async function init() {
-  loadShoppingFromStorage();
   await syncWithFirebase();
   bindEvents();
 }
 
-// ─── FIREBASE LOGIK (AUTOMATISCHER UPLOAD DER NEUEN REZEPTE) ───
 async function syncWithFirebase() {
   db.collection("recipes").onSnapshot(async (snapshot) => {
     let recipes = [];
-    snapshot.forEach(doc => {
-      recipes.push({ id: doc.id, ...doc.data() });
-    });
+    snapshot.forEach(doc => { recipes.push({ id: doc.id, ...doc.data() }); });
 
     if (recipes.length === 0) {
-      console.log("Datenbank leer. Lade Bohneneintopf & Nudelauflauf hoch...");
-      const initialData = [
+      const initial = [
         {
           title: "Portugiesischer Bohneneintopf",
           category: "Zusammen",
-          duration: 45,
-          servings: 4,
+          duration: 45, servings: 4,
           image: "https://i.ibb.co/L7PZz7Z/bohneneintopf.jpg",
           ingredients: [
-            { menge: 250, einheit: "g", name: "Chouriço (oder Mettenden)" },
-            { menge: 2, einheit: "Dosen", name: "Weiße Bohnen" },
-            { menge: 1, einheit: "Bund", name: "Suppengrün" },
-            { menge: 1, einheit: "EL", name: "Tomatenmark" },
-            { menge: 500, einheit: "ml", name: "Fleischbrühe" },
-            { menge: 1, einheit: "TL", name: "Paprikapulver edelsüß" }
+            {menge: 250, einheit: "g", name: "Chouriço"},
+            {menge: 2, einheit: "Dosen", name: "Weiße Bohnen"},
+            {menge: 1, einheit: "Bund", name: "Suppengrün"}
           ],
-          steps: [
-            "Wurst in Scheiben schneiden und anbraten.",
-            "Suppengrün würfeln und kurz mitdünsten.",
-            "Tomatenmark und Paprikapulver hinzufügen.",
-            "Mit Brühe aufgießen und ca. 15 Min. köcheln.",
-            "Bohnen abspülen, dazugeben und weitere 10 Min. ziehen lassen."
-          ]
+          steps: ["Wurst anbraten.", "Gemüse dünsten.", "Mit Brühe kochen.", "Bohnen dazu."]
         },
         {
-          title: "Nudelauflauf mit Brokkoli",
+          title: "Geflügel-Paprika-Pfanne mit Feta",
           category: "Phil",
-          duration: 35,
-          servings: 3,
-          image: "https://i.ibb.co/pW3BfVf/nudelauflauf.jpg",
+          duration: 30, servings: 2,
+          image: "https://i.ibb.co/2S8Xz9G/paprikapfanne.jpg",
           ingredients: [
-            { menge: 300, einheit: "g", name: "Nudeln" },
-            { menge: 1, einheit: "Kopf", name: "Brokkoli" },
-            { menge: 200, einheit: "ml", name: "Sahne" },
-            { menge: 100, einheit: "g", name: "Geriebener Käse" }
+            {menge: 400, einheit: "g", name: "Hähnchenbrust"},
+            {menge: 2, einheit: "Stück", name: "Paprika"},
+            {menge: 150, einheit: "g", name: "Feta"}
           ],
-          steps: [
-            "Nudeln garen, Brokkoli die letzten 3 Min. mitkochen.",
-            "Abgießen und in die Auflaufform geben.",
-            "Sahne würzen, drübergießen und mit Käse bestreuen.",
-            "Bei 200°C ca. 15-20 Min. überbacken."
-          ]
+          steps: ["Fleisch würfeln und braten.", "Paprika dazu.", "Feta am Ende drüberbröseln."]
         }
       ];
-
-      for (const r of initialData) {
-        await db.collection("recipes").add(r);
-      }
+      for (const r of initial) { await db.collection("recipes").add(r); }
       return;
     }
-
     state.recipes = recipes;
     applyFilters();
   });
 }
 
-async function saveRecipeToFirebase(recipeData, editId = null) {
-  if (editId) {
-    await db.collection("recipes").doc(editId).update(recipeData);
-  } else {
-    await db.collection("recipes").add(recipeData);
-  }
-}
-
 function applyFilters() {
-  let results = state.recipes.slice();
-  if (state.activeFilter !== 'all') results = results.filter(r => r.category === state.activeFilter);
+  let res = state.recipes.slice();
+  if (state.activeFilter !== 'all') res = res.filter(r => r.category === state.activeFilter);
   if (state.searchQuery.trim()) {
-    const term = state.searchQuery.toLowerCase();
-    results = results.filter(r => r.title.toLowerCase().includes(term));
+    const t = state.searchQuery.toLowerCase();
+    res = res.filter(r => r.title.toLowerCase().includes(t));
   }
-  state.filtered = results;
+  state.filtered = res;
   renderGrid();
 }
 
 function renderGrid() {
-  dom.resultsInfo.textContent = `${state.filtered.length} Rezepte gefunden`;
+  dom.resultsInfo.textContent = `${state.filtered.length} Rezepte`;
   dom.emptyState.classList.toggle('hidden', state.filtered.length > 0);
   dom.recipesGrid.innerHTML = state.filtered.map(r => `
     <article class="recipe-card" onclick="openRecipe('${r.id}')">
@@ -160,158 +116,139 @@ function renderGrid() {
         <img class="card-image" src="${r.image}" onerror="this.src='https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg'">
         <span class="card-category-tag ${r.category.toLowerCase()}">${r.category}</span>
       </div>
-      <div class="card-body">
-        <h2 class="card-title">${r.title}</h2>
-        <div class="card-meta">${r.duration} Min</div>
-      </div>
+      <div class="card-body"><h2 class="card-title">${r.title}</h2><div class="card-meta">${r.duration} Min</div></div>
     </article>
   `).join('');
 }
 
 function openRecipe(id) {
-  const recipe = state.recipes.find(r => r.id === id);
-  if (!recipe) return;
-  state.currentRecipe = recipe;
-  state.currentPortions = recipe.servings;
-  dom.detailImage.src = recipe.image;
-  dom.detailCategory.textContent = recipe.category;
-  dom.detailCategory.className = `recipe-category-tag ${recipe.category.toLowerCase()}`;
-  dom.detailTitle.textContent = recipe.title;
-  dom.detailDurationText.textContent = `${recipe.duration} Min`;
+  const r = state.recipes.find(rec => rec.id === id);
+  if (!r) return;
+  state.currentRecipe = r;
+  state.currentPortions = r.servings;
+  dom.detailImage.src = r.image;
+  dom.detailCategory.textContent = r.category;
+  dom.detailTitle.textContent = r.title;
+  dom.detailDurationText.textContent = `${r.duration} Min`;
 
-  let editBtn = dom.recipeOverlay.querySelector('.btn-edit-recipe');
-  if (!editBtn) {
-    editBtn = document.createElement('button');
-    editBtn.className = 'btn-edit-recipe';
-    editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-    dom.recipeSheet.querySelector('.recipe-hero').appendChild(editBtn);
-    editBtn.onclick = () => prepareEditRecipe(state.currentRecipe);
+  // Knöpfe für Edit und Löschen
+  let actionBox = dom.recipeSheet.querySelector('.action-box');
+  if (!actionBox) {
+    actionBox = document.createElement('div');
+    actionBox.className = 'action-box';
+    actionBox.style = "position:absolute; top:10px; left:10px; display:flex; gap:10px;";
+    dom.recipeSheet.querySelector('.recipe-hero').appendChild(actionBox);
   }
+  actionBox.innerHTML = `
+    <button class="btn-edit" style="background:white; border:none; border-radius:50%; width:40px; height:40px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">✏️</button>
+    <button class="btn-delete" style="background:#ff4444; border:none; border-radius:50%; width:40px; height:40px; box-shadow:0 2px 5px rgba(0,0,0,0.2); color:white;">🗑️</button>
+  `;
+
+  actionBox.querySelector('.btn-edit').onclick = () => prepareEdit(r);
+  actionBox.querySelector('.btn-delete').onclick = () => deleteRecipe(r.id);
 
   updatePortionsUI();
-  dom.detailSteps.innerHTML = recipe.steps.map((s, i) => `<li><span class="step-number">${i+1}</span><span>${s}</span></li>`).join('');
+  dom.detailSteps.innerHTML = r.steps.map((s, i) => `<li>${s}</li>`).join('');
   openOverlay(dom.recipeOverlay);
 }
 
-function prepareEditRecipe(recipe) {
-  closeOverlay(dom.recipeOverlay);
-  openAddRecipe();
-  dom.addRecipeOverlay.querySelector('h2').textContent = 'Rezept bearbeiten';
-  $('newTitle').value = recipe.title;
-  $('newCategory').value = recipe.category;
-  $('newDuration').value = recipe.duration;
-  $('newServings').value = recipe.servings;
-  $('newImage').value = recipe.image;
-  dom.ingredientBuilder.innerHTML = '';
-  recipe.ingredients.forEach(ing => addIngredientRow(ing.menge, ing.einheit, ing.name));
-  dom.stepsBuilder.innerHTML = '';
-  recipe.steps.forEach(step => addStepRow(step));
-  dom.addRecipeForm.dataset.editId = recipe.id;
+async function deleteRecipe(id) {
+  if (confirm("Dieses Rezept wirklich löschen?")) {
+    await db.collection("recipes").doc(id).delete();
+    closeOverlay(dom.recipeOverlay);
+    showToast("Gelöscht!");
+  }
 }
 
-function handleAddRecipeSubmit(e) {
+function prepareEdit(r) {
+  closeOverlay(dom.recipeOverlay);
+  openAddRecipe();
+  $('newTitle').value = r.title;
+  $('newCategory').value = r.category;
+  $('newDuration').value = r.duration;
+  $('newServings').value = r.servings;
+  $('newImage').value = r.image;
+  dom.ingredientBuilder.innerHTML = '';
+  r.ingredients.forEach(i => addIngredientRow(i.menge, i.einheit, i.name));
+  dom.stepsBuilder.innerHTML = '';
+  r.steps.forEach(s => addStepRow(s));
+  dom.addRecipeForm.dataset.editId = r.id;
+}
+
+function handleAddSubmit(e) {
   e.preventDefault();
   const ingredients = [];
   dom.ingredientBuilder.querySelectorAll('.ingredient-row').forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    if (inputs[2].value) ingredients.push({ menge: parseFloat(inputs[0].value) || 0, einheit: inputs[1].value, name: inputs[2].value });
+    const i = row.querySelectorAll('input');
+    if (i[2].value) ingredients.push({ menge: parseFloat(i[0].value) || 0, einheit: i[1].value, name: i[2].value });
   });
   const steps = [];
-  dom.stepsBuilder.querySelectorAll('textarea').forEach(ta => { if (ta.value) steps.push(ta.value); });
-  const recipeData = {
+  dom.stepsBuilder.querySelectorAll('textarea').forEach(t => { if (t.value) steps.push(t.value); });
+
+  const data = {
     title: $('newTitle').value,
     category: $('newCategory').value,
     duration: parseInt($('newDuration').value) || 0,
     servings: parseInt($('newServings').value) || 4,
     image: $('newImage').value || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
-    ingredients,
-    steps
+    ingredients, steps
   };
-  const editId = dom.addRecipeForm.dataset.editId;
-  saveRecipeToFirebase(recipeData, editId);
+
+  const eid = dom.addRecipeForm.dataset.editId;
+  if (eid) db.collection("recipes").doc(eid).update(data);
+  else db.collection("recipes").add(data);
+  
   closeOverlay(dom.addRecipeOverlay);
   showToast('Gespeichert!');
 }
 
-function loadShoppingFromStorage() {
-  const s = localStorage.getItem('kb_shopping');
-  if (s) state.shoppingItems = JSON.parse(s);
-  renderShoppingList();
-}
-
-function renderShoppingList() {
-  dom.shoppingEmpty.classList.toggle('hidden', state.shoppingItems.length > 0);
-  dom.shoppingItems.innerHTML = state.shoppingItems.map(item => `
-    <li class="shopping-item ${item.checked ? 'checked' : ''}" onclick="toggleShoppingItem(${item.id})">
-      <div class="shopping-item-check"></div>
-      <span>${item.text}</span>
-    </li>
-  `).join('');
-  updateCartBadge();
-}
-
-function toggleShoppingItem(id) {
-  const item = state.shoppingItems.find(i => i.id === id);
-  if (item) item.checked = !item.checked;
-  localStorage.setItem('kb_shopping', JSON.stringify(state.shoppingItems));
-  renderShoppingList();
-}
-
-function updateCartBadge() {
-  const count = state.shoppingItems.filter(i => !i.checked).length;
-  dom.cartBadge.textContent = count;
-  dom.cartBadge.classList.toggle('hidden', count === 0);
-}
-
-function openOverlay(el) { el.classList.remove('hidden'); setTimeout(() => el.classList.add('open'), 10); }
-function closeOverlay(el) { el.classList.remove('open'); setTimeout(() => el.classList.add('hidden'), 400); }
-function showToast(msg) {
-  let t = document.querySelector('.toast');
-  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
-function addIngredientRow(m='', e='', n='') {
-  const div = document.createElement('div'); div.className = 'ingredient-row';
-  div.innerHTML = `<input type="number" step="any" value="${m}" style="width:60px"><input type="text" value="${e}" style="width:60px"><input type="text" value="${n}" style="flex:1"><button type="button" onclick="this.parentElement.remove()">X</button>`;
-  dom.ingredientBuilder.appendChild(div);
-}
-function addStepRow(t='') {
-  const div = document.createElement('div'); div.className = 'step-row';
-  div.innerHTML = `<textarea style="flex:1">${t}</textarea><button type="button" onclick="this.parentElement.remove()">X</button>`;
-  dom.stepsBuilder.appendChild(div);
-}
-function openAddRecipe() {
-  dom.addRecipeForm.reset();
-  delete dom.addRecipeForm.dataset.editId;
-  dom.ingredientBuilder.innerHTML = ''; dom.stepsBuilder.innerHTML = '';
-  addIngredientRow(); addStepRow();
-  openOverlay(dom.addRecipeOverlay);
-}
-function renderIngredients() {
-  const ratio = state.currentPortions / state.currentRecipe.servings;
-  dom.detailIngredients.innerHTML = state.currentRecipe.ingredients.map(ing => `<li><span>${Math.round(ing.menge * ratio * 10)/10} ${ing.einheit}</span> <span>${ing.name}</span></li>`).join('');
-}
-function updatePortionsUI() { dom.portionsCount.textContent = state.currentPortions; renderIngredients(); }
-
 function bindEvents() {
-  dom.searchInput.addEventListener('input', () => { state.searchQuery = dom.searchInput.value; applyFilters(); });
+  dom.searchInput.oninput = () => { state.searchQuery = dom.searchInput.value; applyFilters(); };
   dom.closeRecipe.onclick = () => closeOverlay(dom.recipeOverlay);
+  dom.closeAddRecipeBtn.onclick = () => closeOverlay(dom.addRecipeOverlay);
   dom.fabBtn.onclick = openAddRecipe;
   dom.addIngredientBtn.onclick = () => addIngredientRow();
   dom.addStepBtn.onclick = () => addStepRow();
-  dom.addRecipeForm.onsubmit = handleAddRecipeSubmit;
-  dom.cartBtn.onclick = () => openOverlay(dom.shoppingOverlay);
-  dom.closeShoppingBtn.onclick = () => closeOverlay(dom.shoppingOverlay);
+  dom.addRecipeForm.onsubmit = handleAddSubmit;
   dom.portionsMinus.onclick = () => { if (state.currentPortions > 1) { state.currentPortions--; updatePortionsUI(); } };
   dom.portionsPlus.onclick = () => { state.currentPortions++; updatePortionsUI(); };
-  dom.clearListBtn.onclick = () => { state.shoppingItems = []; localStorage.setItem('kb_shopping', '[]'); renderShoppingList(); };
+  
+  dom.randomBtn.onclick = () => {
+    if (state.filtered.length === 0) return showToast("Nichts zum Auslosen da!");
+    const r = state.filtered[Math.floor(Math.random() * state.filtered.length)];
+    openRecipe(r.id);
+  };
+
   document.querySelectorAll('.filter-btn').forEach(btn => btn.onclick = () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     state.activeFilter = btn.dataset.filter;
     applyFilters();
   });
+}
+
+function openOverlay(el) { el.classList.remove('hidden'); setTimeout(() => el.classList.add('open'), 10); }
+function closeOverlay(el) { el.classList.remove('open'); setTimeout(() => el.classList.add('hidden'), 400); }
+function showToast(m) { let t = document.createElement('div'); t.className = 'toast show'; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
+function addIngredientRow(m='', e='', n='') {
+  const d = document.createElement('div'); d.className = 'ingredient-row';
+  d.innerHTML = `<input type="number" step="any" value="${m}" style="width:50px"><input type="text" value="${e}" style="width:50px"><input type="text" value="${n}" style="flex:1"><button type="button" onclick="this.parentElement.remove()">X</button>`;
+  dom.ingredientBuilder.appendChild(d);
+}
+function addStepRow(t='') {
+  const d = document.createElement('div'); d.className = 'step-row';
+  d.innerHTML = `<textarea style="flex:1">${t}</textarea><button type="button" onclick="this.parentElement.remove()">X</button>`;
+  dom.stepsBuilder.appendChild(d);
+}
+function openAddRecipe() {
+  dom.addRecipeForm.reset(); delete dom.addRecipeForm.dataset.editId;
+  dom.ingredientBuilder.innerHTML = ''; dom.stepsBuilder.innerHTML = '';
+  addIngredientRow(); addStepRow(); openOverlay(dom.addRecipeOverlay);
+}
+function updatePortionsUI() {
+  dom.portionsCount.textContent = state.currentPortions;
+  const ratio = state.currentPortions / state.currentRecipe.servings;
+  dom.detailIngredients.innerHTML = state.currentRecipe.ingredients.map(i => `<li><span>${Math.round(i.menge * ratio * 10)/10} ${i.einheit}</span> ${i.name}</li>`).join('');
 }
 
 init();
