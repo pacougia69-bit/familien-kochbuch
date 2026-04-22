@@ -1,8 +1,7 @@
 /* ============================================================
-   FAMILIEN-KOCHBUCH — Firebase Version (Final)
+   FAMILIEN-KOCHBUCH — Firebase Version (Mit neuen Rezepten)
    ============================================================ */
 
-// 1. Firebase Konfiguration (Deine Zugangsdaten)
 const firebaseConfig = {
   apiKey: "AIzaSyCp7M97mA2gbkevQNni_6RIo6XNpLJLOgc",
   authDomain: "familien-kochbuch-56de6.firebaseapp.com",
@@ -12,11 +11,9 @@ const firebaseConfig = {
   appId: "1:138685113816:web:574ed7eb20ca5cabad7ead"
 };
 
-// 2. Firebase Initialisieren
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ─── STATE ────────────────────────────────────────────────────
 const state = {
   recipes: [],
   filtered: [],
@@ -28,7 +25,6 @@ const state = {
   shoppingItems: []
 };
 
-// ─── DOM REFS ──────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const dom = {
   recipesGrid: $('recipesGrid'),
@@ -65,35 +61,68 @@ const dom = {
   clearListBtn: $('clearListBtn')
 };
 
-// ─── INIT ──────────────────────────────────────────────────────
 async function init() {
   loadShoppingFromStorage();
   await syncWithFirebase();
   bindEvents();
 }
 
-// ─── FIREBASE LOGIK ────────────────────────────────────────────
+// ─── FIREBASE LOGIK (AUTOMATISCHER UPLOAD DER NEUEN REZEPTE) ───
 async function syncWithFirebase() {
-  // Echtzeit-Überwachung: Sobald sich was in der Cloud ändert, aktualisiert sich die App
   db.collection("recipes").onSnapshot(async (snapshot) => {
     let recipes = [];
     snapshot.forEach(doc => {
       recipes.push({ id: doc.id, ...doc.data() });
     });
 
-    // Erster Start: Wenn Firebase leer ist, lade Daten aus recipes.json hoch
     if (recipes.length === 0) {
-      console.log("Datenbank ist noch leer. Kopiere Rezepte aus recipes.json...");
-      try {
-        const res = await fetch('./data/recipes.json');
-        const initialData = await res.json();
-        for (const r of initialData) {
-          // Wir entfernen die alte ID, Firebase vergibt eigene
-          const { id, ...dataWithoutId } = r;
-          await db.collection("recipes").add(dataWithoutId);
+      console.log("Datenbank leer. Lade Bohneneintopf & Nudelauflauf hoch...");
+      const initialData = [
+        {
+          title: "Portugiesischer Bohneneintopf",
+          category: "Zusammen",
+          duration: 45,
+          servings: 4,
+          image: "https://i.ibb.co/L7PZz7Z/bohneneintopf.jpg",
+          ingredients: [
+            { menge: 250, einheit: "g", name: "Chouriço (oder Mettenden)" },
+            { menge: 2, einheit: "Dosen", name: "Weiße Bohnen" },
+            { menge: 1, einheit: "Bund", name: "Suppengrün" },
+            { menge: 1, einheit: "EL", name: "Tomatenmark" },
+            { menge: 500, einheit: "ml", name: "Fleischbrühe" },
+            { menge: 1, einheit: "TL", name: "Paprikapulver edelsüß" }
+          ],
+          steps: [
+            "Wurst in Scheiben schneiden und anbraten.",
+            "Suppengrün würfeln und kurz mitdünsten.",
+            "Tomatenmark und Paprikapulver hinzufügen.",
+            "Mit Brühe aufgießen und ca. 15 Min. köcheln.",
+            "Bohnen abspülen, dazugeben und weitere 10 Min. ziehen lassen."
+          ]
+        },
+        {
+          title: "Nudelauflauf mit Brokkoli",
+          category: "Phil",
+          duration: 35,
+          servings: 3,
+          image: "https://i.ibb.co/pW3BfVf/nudelauflauf.jpg",
+          ingredients: [
+            { menge: 300, einheit: "g", name: "Nudeln" },
+            { menge: 1, einheit: "Kopf", name: "Brokkoli" },
+            { menge: 200, einheit: "ml", name: "Sahne" },
+            { menge: 100, einheit: "g", name: "Geriebener Käse" }
+          ],
+          steps: [
+            "Nudeln garen, Brokkoli die letzten 3 Min. mitkochen.",
+            "Abgießen und in die Auflaufform geben.",
+            "Sahne würzen, drübergießen und mit Käse bestreuen.",
+            "Bei 200°C ca. 15-20 Min. überbacken."
+          ]
         }
-      } catch (e) {
-        console.error("Fehler beim Initial-Upload:", e);
+      ];
+
+      for (const r of initialData) {
+        await db.collection("recipes").add(r);
       }
       return;
     }
@@ -111,11 +140,9 @@ async function saveRecipeToFirebase(recipeData, editId = null) {
   }
 }
 
-// ─── FILTER & RENDER ──────────────────────────────────────────
 function applyFilters() {
   let results = state.recipes.slice();
   if (state.activeFilter !== 'all') results = results.filter(r => r.category === state.activeFilter);
-  if (state.timeFilter) results = results.filter(r => r.duration < 30);
   if (state.searchQuery.trim()) {
     const term = state.searchQuery.toLowerCase();
     results = results.filter(r => r.title.toLowerCase().includes(term));
@@ -141,20 +168,17 @@ function renderGrid() {
   `).join('');
 }
 
-// ─── DETAIL & EDIT ───────────────────────────────────────────
 function openRecipe(id) {
   const recipe = state.recipes.find(r => r.id === id);
   if (!recipe) return;
   state.currentRecipe = recipe;
   state.currentPortions = recipe.servings;
-
   dom.detailImage.src = recipe.image;
   dom.detailCategory.textContent = recipe.category;
   dom.detailCategory.className = `recipe-category-tag ${recipe.category.toLowerCase()}`;
   dom.detailTitle.textContent = recipe.title;
   dom.detailDurationText.textContent = `${recipe.duration} Min`;
 
-  // Edit Button (Stift)
   let editBtn = dom.recipeOverlay.querySelector('.btn-edit-recipe');
   if (!editBtn) {
     editBtn = document.createElement('button');
@@ -185,7 +209,6 @@ function prepareEditRecipe(recipe) {
   dom.addRecipeForm.dataset.editId = recipe.id;
 }
 
-// ─── FORMULAR ─────────────────────────────────────────────────
 function handleAddRecipeSubmit(e) {
   e.preventDefault();
   const ingredients = [];
@@ -195,7 +218,6 @@ function handleAddRecipeSubmit(e) {
   });
   const steps = [];
   dom.stepsBuilder.querySelectorAll('textarea').forEach(ta => { if (ta.value) steps.push(ta.value); });
-
   const recipeData = {
     title: $('newTitle').value,
     category: $('newCategory').value,
@@ -205,14 +227,12 @@ function handleAddRecipeSubmit(e) {
     ingredients,
     steps
   };
-
   const editId = dom.addRecipeForm.dataset.editId;
   saveRecipeToFirebase(recipeData, editId);
   closeOverlay(dom.addRecipeOverlay);
   showToast('Gespeichert!');
 }
 
-// ─── SHOPPING LIST ────────────────────────────────────────────
 function loadShoppingFromStorage() {
   const s = localStorage.getItem('kb_shopping');
   if (s) state.shoppingItems = JSON.parse(s);
@@ -243,7 +263,6 @@ function updateCartBadge() {
   dom.cartBadge.classList.toggle('hidden', count === 0);
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────
 function openOverlay(el) { el.classList.remove('hidden'); setTimeout(() => el.classList.add('open'), 10); }
 function closeOverlay(el) { el.classList.remove('open'); setTimeout(() => el.classList.add('hidden'), 400); }
 function showToast(msg) {
@@ -275,7 +294,6 @@ function renderIngredients() {
 }
 function updatePortionsUI() { dom.portionsCount.textContent = state.currentPortions; renderIngredients(); }
 
-// ─── EVENTS ───────────────────────────────────────────────────
 function bindEvents() {
   dom.searchInput.addEventListener('input', () => { state.searchQuery = dom.searchInput.value; applyFilters(); });
   dom.closeRecipe.onclick = () => closeOverlay(dom.recipeOverlay);
@@ -288,7 +306,6 @@ function bindEvents() {
   dom.portionsMinus.onclick = () => { if (state.currentPortions > 1) { state.currentPortions--; updatePortionsUI(); } };
   dom.portionsPlus.onclick = () => { state.currentPortions++; updatePortionsUI(); };
   dom.clearListBtn.onclick = () => { state.shoppingItems = []; localStorage.setItem('kb_shopping', '[]'); renderShoppingList(); };
-  
   document.querySelectorAll('.filter-btn').forEach(btn => btn.onclick = () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
