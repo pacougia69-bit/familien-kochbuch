@@ -7,7 +7,7 @@ const firebaseConfig = {
   appId: "1:138685113816:web:574ed7eb20ca5cabad7ead"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.firestore();
 
 const state = {
@@ -21,23 +21,6 @@ const state = {
 };
 
 const $ = (id) => document.getElementById(id);
-const dom = {
-  recipesGrid: $('recipesGrid'),
-  searchInput: $('searchInput'),
-  randomBtn: $('randomBtn'),
-  fabBtn: $('fabBtn'),
-  plannerOverlay: $('plannerOverlay'),
-  openPlannerBtn: $('openPlannerBtn'),
-  recipeOverlay: $('recipeOverlay'),
-  detailImage: $('detailImage'),
-  detailTitle: $('detailTitle'),
-  detailIngredients: $('detailIngredients'),
-  detailSteps: $('detailSteps'),
-  portionsCount: $('portionsCount'),
-  plannerDisplay: $('plannerDisplay'),
-  daySelector: $('daySelector'),
-  addToPlannerBtn: $('addToPlannerBtn')
-};
 
 async function init() {
   await syncWithFirebase();
@@ -50,21 +33,30 @@ async function syncWithFirebase() {
     let recipes = [];
     snapshot.forEach(doc => { recipes.push({ id: doc.id, ...doc.data() }); });
 
-    // TRICK: Wenn Bohneneintopf fehlt, lade ihn IMMER hoch
-    const hasBohnen = recipes.some(r => r.title.includes("Bohneneintopf"));
-    if (!hasBohnen) {
+    // GEZIELTE PRÜFUNG: Wenn Bohneneintopf fehlt -> Rezepte hochladen
+    const hasNew = recipes.some(r => r.title.includes("Bohneneintopf"));
+    if (!hasNew) {
+      console.log("Erzeuge neue Rezepte...");
       const news = [
         {
           title: "Portugiesischer Bohneneintopf", category: "Zusammen", duration: 45, servings: 4,
           image: "https://i.ibb.co/L7PZz7Z/bohneneintopf.jpg",
-          ingredients: [{menge: 2, einheit: "Dosen", name: "Bohnen"}, {menge: 250, einheit: "g", name: "Wurst"}],
-          steps: ["Wurst braten", "Gemüse dazu", "Köcheln"]
+          ingredients: [
+            {menge: 250, einheit: "g", name: "Chouriço"},
+            {menge: 2, einheit: "Dosen", name: "Weiße Bohnen"},
+            {menge: 1, einheit: "Bund", name: "Suppengrün"}
+          ],
+          steps: ["Wurst braten.", "Gemüse würfeln und mitdünsten.", "Brühe dazu, 15 Min. kochen.", "Bohnen rein."]
         },
         {
           title: "Geflügel-Paprika-Pfanne mit Feta", category: "Phil", duration: 30, servings: 2,
           image: "https://i.ibb.co/2S8Xz9G/paprikapfanne.jpg",
-          ingredients: [{menge: 400, einheit: "g", name: "Hähnchen"}, {menge: 150, einheit: "g", name: "Feta"}],
-          steps: ["Fleisch braten", "Paprika dazu", "Feta drüber"]
+          ingredients: [
+            {menge: 400, einheit: "g", name: "Hähnchen"},
+            {menge: 2, einheit: "Stück", name: "Paprika"},
+            {menge: 150, einheit: "g", name: "Feta"}
+          ],
+          steps: ["Fleisch braten.", "Paprika und Zwiebeln dazu.", "Feta am Ende drüber."]
         }
       ];
       for (const r of news) { await db.collection("recipes").add(r); }
@@ -85,12 +77,14 @@ async function syncPlanner() {
 function renderPlanner() {
   const days = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
   const names = {"Mo":"Montag","Di":"Dienstag","Mi":"Mittwoch","Do":"Donnerstag","Fr":"Freitag","Sa":"Samstag","So":"Sonntag"};
-  dom.plannerDisplay.innerHTML = days.map(d => `
-    <div class="planner-row">
-      <strong>${names[d]}:</strong> 
-      <span>${state.weekPlan[d] || "---"}</span>
-    </div>
-  `).join('');
+  if($('plannerDisplay')) {
+    $('plannerDisplay').innerHTML = days.map(d => `
+      <div class="planner-row">
+        <strong>${names[d]}</strong> 
+        <span style="color:#E85D4A; font-weight:bold;">${state.weekPlan[d] || "---"}</span>
+      </div>
+    `).join('');
+  }
 }
 
 function applyFilters() {
@@ -102,47 +96,63 @@ function applyFilters() {
 }
 
 function renderGrid() {
-  dom.recipesGrid.innerHTML = state.filtered.map(r => `
-    <div class="recipe-card" onclick="openRecipe('${r.id}')">
-      <img src="${r.image}">
-      <h3>${r.title}</h3>
+  if(!$('recipesGrid')) return;
+  $('recipesGrid').innerHTML = state.filtered.map(r => `
+    <div class="recipe-card" onclick="openRecipe('${r.id}')" style="cursor:pointer; margin-bottom:15px; border-radius:15px; overflow:hidden; border:1px solid #eee; background:white;">
+      <img src="${r.image}" style="width:100%; height:150px; object-fit:cover;">
+      <div style="padding:10px;">
+        <h3 style="margin:0; font-size:1rem;">${r.title}</h3>
+        <small style="color:#999;">${r.duration} Min | ${r.category}</small>
+      </div>
     </div>
   `).join('');
+  $('resultsInfo').textContent = `${state.filtered.length} Rezepte gefunden`;
 }
 
-function openRecipe(id) {
+window.openRecipe = function(id) {
   const r = state.recipes.find(rec => rec.id === id);
+  if(!r) return;
   state.currentRecipe = r;
-  dom.detailImage.src = r.image;
-  dom.detailTitle.textContent = r.title;
+  $('detailImage').src = r.image;
+  $('detailTitle').textContent = r.title;
   renderIngredients();
-  dom.detailSteps.innerHTML = r.steps.map(s => `<li>${s}</li>`).join('');
-  dom.recipeOverlay.classList.remove('hidden');
-}
+  $('detailSteps').innerHTML = r.steps.map(s => `<li>${s}</li>`).join('');
+  $('recipeOverlay').classList.remove('hidden');
+};
 
 function renderIngredients() {
   const ratio = state.currentPortions / state.currentRecipe.servings;
-  dom.detailIngredients.innerHTML = state.currentRecipe.ingredients.map(i => 
+  $('detailIngredients').innerHTML = state.currentRecipe.ingredients.map(i => 
     `<li>${Math.round(i.menge * ratio)} ${i.einheit} ${i.name}</li>`).join('');
 }
 
 function bindEvents() {
-  dom.openPlannerBtn.onclick = () => dom.plannerOverlay.classList.remove('hidden');
+  $('openPlannerBtn').onclick = () => $('plannerOverlay').classList.remove('hidden');
+  
   document.querySelectorAll('.close-overlay').forEach(b => b.onclick = () => {
-    dom.plannerOverlay.classList.add('hidden');
-    dom.recipeOverlay.classList.add('hidden');
+    $('plannerOverlay').classList.add('hidden');
+    $('recipeOverlay').classList.add('hidden');
   });
 
-  dom.addToPlannerBtn.onclick = async () => {
-    const day = dom.daySelector.value;
+  $('addToPlannerBtn').onclick = async () => {
+    const day = $('daySelector').value;
     if (!day) return;
-    await db.collection("planner").doc("currentWeek").update({ [day]: state.currentRecipe.title });
-    dom.recipeOverlay.classList.add('hidden');
+    await db.collection("planner").doc("currentWeek").set({ ...state.weekPlan, [day]: state.currentRecipe.title });
+    $('recipeOverlay').classList.add('hidden');
   };
 
-  dom.randomBtn.onclick = () => {
+  $('clearPlannerBtn').onclick = async () => {
+    if(confirm("Plan leeren?")) await db.collection("planner").doc("currentWeek").set({});
+  };
+
+  $('randomBtn').onclick = () => {
     const r = state.filtered[Math.floor(Math.random() * state.filtered.length)];
-    if(r) openRecipe(r.id);
+    if(r) window.openRecipe(r.id);
+  };
+
+  $('searchInput').oninput = (e) => {
+    state.searchQuery = e.target.value;
+    applyFilters();
   };
 
   document.querySelectorAll('.filter-btn').forEach(btn => btn.onclick = () => {
