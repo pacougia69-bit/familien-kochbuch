@@ -16,8 +16,7 @@ const state = {
   activeFilter: 'all',
   searchQuery: '',
   currentRecipe: null,
-  currentPortions: 4,
-  shoppingItems: []
+  currentPortions: 4
 };
 
 const $ = (id) => document.getElementById(id);
@@ -61,8 +60,11 @@ async function syncWithFirebase() {
     let recipes = [];
     snapshot.forEach(doc => { recipes.push({ id: doc.id, ...doc.data() }); });
 
-    // Wenn die Datenbank leer ist, laden wir deine 3 Rezepte hoch
-    if (recipes.length === 0) {
+    // Prüfen, ob die neuen Rezepte schon da sind, sonst hochladen
+    const hasNewOnes = recipes.some(r => r.title === "Portugiesischer Bohneneintopf");
+    
+    if (!hasNewOnes) {
+      console.log("Lade neue Rezepte hoch...");
       const initial = [
         {
           title: "Portugiesischer Bohneneintopf",
@@ -71,20 +73,11 @@ async function syncWithFirebase() {
           image: "https://i.ibb.co/L7PZz7Z/bohneneintopf.jpg",
           ingredients: [
             {menge: 250, einheit: "g", name: "Chouriço (oder Mettenden)"},
-            {menge: 2, einheit: "Dosen", name: "Weiße Bohnen (Abtropfgewicht ca. 240g)"},
-            {menge: 1, einheit: "Bund", name: "Suppengrün (Möhre, Porree, Sellerie)"},
-            {menge: 1, einheit: "EL", name: "Tomatenmark"},
-            {menge: 500, einheit: "ml", name: "Fleischbrühe"},
-            {menge: 1, einheit: "TL", name: "Paprikapulver edelsüß"}
+            {menge: 2, einheit: "Dosen", name: "Weiße Bohnen"},
+            {menge: 1, einheit: "Bund", name: "Suppengrün"},
+            {menge: 500, einheit: "ml", name: "Brühe"}
           ],
-          steps: [
-            "Wurst in Scheiben schneiden und in einem großen Topf fettfrei anbraten.",
-            "Suppengrün fein würfeln und kurz mitdünsten.",
-            "Tomatenmark und Paprikapulver unterrühren.",
-            "Mit Fleischbrühe aufgießen und zugedeckt ca. 15 Min. köcheln lassen.",
-            "Bohnen in einem Sieb abspülen, dazugeben und weitere 10 Min. ziehen lassen.",
-            "Nach Belieben mit Salz und Pfeffer abschmecken."
-          ]
+          steps: ["Wurst anbraten.", "Gemüse würfeln und mitdünsten.", "Brühe dazu und 15 Min. kochen.", "Bohnen dazu."]
         },
         {
           title: "Geflügel-Paprika-Pfanne mit Feta",
@@ -92,46 +85,16 @@ async function syncWithFirebase() {
           duration: 30, servings: 2,
           image: "https://i.ibb.co/2S8Xz9G/paprikapfanne.jpg",
           ingredients: [
-            {menge: 400, einheit: "g", name: "Hähnchenbrustfilet"},
-            {menge: 2, einheit: "Stück", name: "Paprikaschoten (rot & gelb)"},
-            {menge: 1, einheit: "Stück", name: "Zwiebel"},
-            {menge: 150, einheit: "g", name: "Feta-Käse"},
-            {menge: 1, einheit: "EL", name: "Olivenöl"},
-            {menge: 1, einheit: "TL", name: "Oregano (getrocknet)"}
+            {menge: 400, einheit: "g", name: "Hähnchenbrust"},
+            {menge: 2, einheit: "Stück", name: "Paprika"},
+            {menge: 150, einheit: "g", name: "Feta"}
           ],
-          steps: [
-            "Hähnchenbrust waschen, trocken tupfen und in mundgerechte Würfel schneiden.",
-            "Paprika putzen und in Streifen schneiden, Zwiebel fein würfeln.",
-            "Öl in einer Pfanne erhitzen und das Fleisch darin goldbraun anbraten.",
-            "Zwiebeln und Paprika hinzufügen und ca. 5-8 Minuten mitbraten.",
-            "Mit Salz, Pfeffer und Oregano würzen.",
-            "Feta grob zerbröseln, über die Pfanne geben und kurz schmelzen lassen."
-          ]
-        },
-        {
-          title: "Nudelauflauf mit Brokkoli",
-          category: "Phil",
-          duration: 35, servings: 3,
-          image: "https://i.ibb.co/pW3BfVf/nudelauflauf.jpg",
-          ingredients: [
-            {menge: 300, einheit: "g", name: "Nudeln (z.B. Penne oder Fusilli)"},
-            {menge: 1, einheit: "Kopf", name: "Brokkoli (frisch)"},
-            {menge: 200, einheit: "ml", name: "Sahne oder Kochsahne"},
-            {menge: 100, einheit: "g", name: "Gerieber Käse (z.B. Gouda)"},
-            {menge: 1, einheit: "Prise", name: "Muskatnuss"}
-          ],
-          steps: [
-            "Nudeln in Salzwasser nach Packungsanweisung garen.",
-            "Brokkoli in kleine Röschen teilen und die letzten 3-4 Min. mit den Nudeln kochen.",
-            "Alles abgießen und in eine gefettete Auflaufform geben.",
-            "Sahne mit Salz, Pfeffer und Muskat verrühren und darüber gießen.",
-            "Mit Käse bestreuen und im Ofen bei 200°C ca. 15 Min. goldbraun backen."
-          ]
+          steps: ["Fleisch braten.", "Paprika und Zwiebeln dazu.", "Feta am Ende drüber."]
         }
       ];
       for (const r of initial) { await db.collection("recipes").add(r); }
-      return;
     }
+
     state.recipes = recipes;
     applyFilters();
   });
@@ -172,6 +135,7 @@ function openRecipe(id) {
   dom.detailTitle.textContent = r.title;
   dom.detailDurationText.textContent = `${r.duration} Min`;
 
+  // Action Buttons (Edit & Müll)
   let actionBox = dom.recipeSheet.querySelector('.action-box');
   if (!actionBox) {
     actionBox = document.createElement('div');
@@ -196,7 +160,7 @@ async function deleteRecipe(id) {
   if (confirm("Dieses Rezept wirklich löschen?")) {
     await db.collection("recipes").doc(id).delete();
     closeOverlay(dom.recipeOverlay);
-    showToast("Rezept wurde gelöscht!");
+    showToast("Gelöscht!");
   }
 }
 
@@ -224,7 +188,6 @@ function handleAddSubmit(e) {
   });
   const steps = [];
   dom.stepsBuilder.querySelectorAll('textarea').forEach(t => { if (t.value) steps.push(t.value); });
-
   const data = {
     title: $('newTitle').value,
     category: $('newCategory').value,
@@ -233,11 +196,9 @@ function handleAddSubmit(e) {
     image: $('newImage').value || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
     ingredients, steps
   };
-
   const eid = dom.addRecipeForm.dataset.editId;
   if (eid) db.collection("recipes").doc(eid).update(data);
   else db.collection("recipes").add(data);
-  
   closeOverlay(dom.addRecipeOverlay);
   showToast('Gespeichert!');
 }
@@ -253,10 +214,17 @@ function bindEvents() {
   dom.portionsMinus.onclick = () => { if (state.currentPortions > 1) { state.currentPortions--; updatePortionsUI(); } };
   dom.portionsPlus.onclick = () => { state.currentPortions++; updatePortionsUI(); };
   
+  // GLÜCKSRAD LOGIK: Lost nur aus dem gefilterten state.filtered!
   dom.randomBtn.onclick = () => {
     if (state.filtered.length === 0) return showToast("Nichts zum Auslosen da!");
-    const r = state.filtered[Math.floor(Math.random() * state.filtered.length)];
-    openRecipe(r.id);
+    // Animation
+    dom.recipesGrid.style.opacity = '0.3';
+    setTimeout(() => {
+      const r = state.filtered[Math.floor(Math.random() * state.filtered.length)];
+      openRecipe(r.id);
+      dom.recipesGrid.style.opacity = '1';
+      showToast("Zufall hat entschieden! 🎲");
+    }, 400);
   };
 
   document.querySelectorAll('.filter-btn').forEach(btn => btn.onclick = () => {
@@ -272,8 +240,7 @@ function closeOverlay(el) { el.classList.remove('open'); setTimeout(() => el.cla
 function showToast(m) { 
   let t = document.createElement('div'); 
   t.style = "position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:10px 20px; border-radius:20px; z-index:1000;";
-  t.textContent = m; 
-  document.body.appendChild(t); 
+  t.textContent = m; document.body.appendChild(t); 
   setTimeout(() => t.remove(), 2000); 
 }
 function addIngredientRow(m='', e='', n='') {
