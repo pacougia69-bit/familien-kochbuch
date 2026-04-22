@@ -61,6 +61,7 @@ async function syncWithFirebase() {
     let recipes = [];
     snapshot.forEach(doc => { recipes.push({ id: doc.id, ...doc.data() }); });
 
+    // Wenn die Datenbank leer ist, laden wir deine 3 Rezepte hoch
     if (recipes.length === 0) {
       const initial = [
         {
@@ -69,11 +70,21 @@ async function syncWithFirebase() {
           duration: 45, servings: 4,
           image: "https://i.ibb.co/L7PZz7Z/bohneneintopf.jpg",
           ingredients: [
-            {menge: 250, einheit: "g", name: "Chouriço"},
-            {menge: 2, einheit: "Dosen", name: "Weiße Bohnen"},
-            {menge: 1, einheit: "Bund", name: "Suppengrün"}
+            {menge: 250, einheit: "g", name: "Chouriço (oder Mettenden)"},
+            {menge: 2, einheit: "Dosen", name: "Weiße Bohnen (Abtropfgewicht ca. 240g)"},
+            {menge: 1, einheit: "Bund", name: "Suppengrün (Möhre, Porree, Sellerie)"},
+            {menge: 1, einheit: "EL", name: "Tomatenmark"},
+            {menge: 500, einheit: "ml", name: "Fleischbrühe"},
+            {menge: 1, einheit: "TL", name: "Paprikapulver edelsüß"}
           ],
-          steps: ["Wurst anbraten.", "Gemüse dünsten.", "Mit Brühe kochen.", "Bohnen dazu."]
+          steps: [
+            "Wurst in Scheiben schneiden und in einem großen Topf fettfrei anbraten.",
+            "Suppengrün fein würfeln und kurz mitdünsten.",
+            "Tomatenmark und Paprikapulver unterrühren.",
+            "Mit Fleischbrühe aufgießen und zugedeckt ca. 15 Min. köcheln lassen.",
+            "Bohnen in einem Sieb abspülen, dazugeben und weitere 10 Min. ziehen lassen.",
+            "Nach Belieben mit Salz und Pfeffer abschmecken."
+          ]
         },
         {
           title: "Geflügel-Paprika-Pfanne mit Feta",
@@ -81,11 +92,41 @@ async function syncWithFirebase() {
           duration: 30, servings: 2,
           image: "https://i.ibb.co/2S8Xz9G/paprikapfanne.jpg",
           ingredients: [
-            {menge: 400, einheit: "g", name: "Hähnchenbrust"},
-            {menge: 2, einheit: "Stück", name: "Paprika"},
-            {menge: 150, einheit: "g", name: "Feta"}
+            {menge: 400, einheit: "g", name: "Hähnchenbrustfilet"},
+            {menge: 2, einheit: "Stück", name: "Paprikaschoten (rot & gelb)"},
+            {menge: 1, einheit: "Stück", name: "Zwiebel"},
+            {menge: 150, einheit: "g", name: "Feta-Käse"},
+            {menge: 1, einheit: "EL", name: "Olivenöl"},
+            {menge: 1, einheit: "TL", name: "Oregano (getrocknet)"}
           ],
-          steps: ["Fleisch würfeln und braten.", "Paprika dazu.", "Feta am Ende drüberbröseln."]
+          steps: [
+            "Hähnchenbrust waschen, trocken tupfen und in mundgerechte Würfel schneiden.",
+            "Paprika putzen und in Streifen schneiden, Zwiebel fein würfeln.",
+            "Öl in einer Pfanne erhitzen und das Fleisch darin goldbraun anbraten.",
+            "Zwiebeln und Paprika hinzufügen und ca. 5-8 Minuten mitbraten.",
+            "Mit Salz, Pfeffer und Oregano würzen.",
+            "Feta grob zerbröseln, über die Pfanne geben und kurz schmelzen lassen."
+          ]
+        },
+        {
+          title: "Nudelauflauf mit Brokkoli",
+          category: "Phil",
+          duration: 35, servings: 3,
+          image: "https://i.ibb.co/pW3BfVf/nudelauflauf.jpg",
+          ingredients: [
+            {menge: 300, einheit: "g", name: "Nudeln (z.B. Penne oder Fusilli)"},
+            {menge: 1, einheit: "Kopf", name: "Brokkoli (frisch)"},
+            {menge: 200, einheit: "ml", name: "Sahne oder Kochsahne"},
+            {menge: 100, einheit: "g", name: "Gerieber Käse (z.B. Gouda)"},
+            {menge: 1, einheit: "Prise", name: "Muskatnuss"}
+          ],
+          steps: [
+            "Nudeln in Salzwasser nach Packungsanweisung garen.",
+            "Brokkoli in kleine Röschen teilen und die letzten 3-4 Min. mit den Nudeln kochen.",
+            "Alles abgießen und in eine gefettete Auflaufform geben.",
+            "Sahne mit Salz, Pfeffer und Muskat verrühren und darüber gießen.",
+            "Mit Käse bestreuen und im Ofen bei 200°C ca. 15 Min. goldbraun backen."
+          ]
         }
       ];
       for (const r of initial) { await db.collection("recipes").add(r); }
@@ -131,21 +172,20 @@ function openRecipe(id) {
   dom.detailTitle.textContent = r.title;
   dom.detailDurationText.textContent = `${r.duration} Min`;
 
-  // Knöpfe für Edit und Löschen
   let actionBox = dom.recipeSheet.querySelector('.action-box');
   if (!actionBox) {
     actionBox = document.createElement('div');
     actionBox.className = 'action-box';
-    actionBox.style = "position:absolute; top:10px; left:10px; display:flex; gap:10px;";
+    actionBox.style = "position:absolute; top:10px; left:10px; display:flex; gap:10px; z-index:100;";
     dom.recipeSheet.querySelector('.recipe-hero').appendChild(actionBox);
   }
   actionBox.innerHTML = `
-    <button class="btn-edit" style="background:white; border:none; border-radius:50%; width:40px; height:40px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">✏️</button>
-    <button class="btn-delete" style="background:#ff4444; border:none; border-radius:50%; width:40px; height:40px; box-shadow:0 2px 5px rgba(0,0,0,0.2); color:white;">🗑️</button>
+    <button class="btn-edit" style="background:white; border:none; border-radius:50%; width:40px; height:40px; box-shadow:0 2px 5px rgba(0,0,0,0.2); font-size:18px; cursor:pointer;">✏️</button>
+    <button class="btn-delete" style="background:#ff4444; border:none; border-radius:50%; width:40px; height:40px; box-shadow:0 2px 5px rgba(0,0,0,0.2); color:white; font-size:18px; cursor:pointer;">🗑️</button>
   `;
 
-  actionBox.querySelector('.btn-edit').onclick = () => prepareEdit(r);
-  actionBox.querySelector('.btn-delete').onclick = () => deleteRecipe(r.id);
+  actionBox.querySelector('.btn-edit').onclick = (e) => { e.stopPropagation(); prepareEdit(r); };
+  actionBox.querySelector('.btn-delete').onclick = (e) => { e.stopPropagation(); deleteRecipe(r.id); };
 
   updatePortionsUI();
   dom.detailSteps.innerHTML = r.steps.map((s, i) => `<li>${s}</li>`).join('');
@@ -156,7 +196,7 @@ async function deleteRecipe(id) {
   if (confirm("Dieses Rezept wirklich löschen?")) {
     await db.collection("recipes").doc(id).delete();
     closeOverlay(dom.recipeOverlay);
-    showToast("Gelöscht!");
+    showToast("Rezept wurde gelöscht!");
   }
 }
 
@@ -229,14 +269,22 @@ function bindEvents() {
 
 function openOverlay(el) { el.classList.remove('hidden'); setTimeout(() => el.classList.add('open'), 10); }
 function closeOverlay(el) { el.classList.remove('open'); setTimeout(() => el.classList.add('hidden'), 400); }
-function showToast(m) { let t = document.createElement('div'); t.className = 'toast show'; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
+function showToast(m) { 
+  let t = document.createElement('div'); 
+  t.style = "position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:10px 20px; border-radius:20px; z-index:1000;";
+  t.textContent = m; 
+  document.body.appendChild(t); 
+  setTimeout(() => t.remove(), 2000); 
+}
 function addIngredientRow(m='', e='', n='') {
   const d = document.createElement('div'); d.className = 'ingredient-row';
+  d.style = "display:flex; gap:5px; margin-bottom:5px;";
   d.innerHTML = `<input type="number" step="any" value="${m}" style="width:50px"><input type="text" value="${e}" style="width:50px"><input type="text" value="${n}" style="flex:1"><button type="button" onclick="this.parentElement.remove()">X</button>`;
   dom.ingredientBuilder.appendChild(d);
 }
 function addStepRow(t='') {
   const d = document.createElement('div'); d.className = 'step-row';
+  d.style = "display:flex; gap:5px; margin-bottom:5px;";
   d.innerHTML = `<textarea style="flex:1">${t}</textarea><button type="button" onclick="this.parentElement.remove()">X</button>`;
   dom.stepsBuilder.appendChild(d);
 }
