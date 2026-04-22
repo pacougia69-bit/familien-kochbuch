@@ -16,7 +16,6 @@
 </head>
   <body>
 
-    <!-- ===== APP HEADER ===== -->
     <header class="app-header">
       <div class="header-inner">
         <div class="header-brand">
@@ -36,17 +35,14 @@
       </div>
     </header>
 
-    <!-- ===== MAIN CONTENT ===== -->
     <main class="app-main">
 
-      <!-- Filter Bar -->
       <div class="filter-bar">
         <button class="filter-btn active" data-filter="all">Alle</button>
         <button class="filter-btn" data-filter="Phil">Phil</button>
         <button class="filter-btn" data-filter="Zusammen">Zusammen</button>
       </div>
 
-      <!-- Search & Time Filter -->
       <div class="search-section">
         <div class="search-input-wrapper">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -75,13 +71,10 @@
         </div>
       </div>
 
-      <!-- Results Info -->
       <div class="results-info" id="resultsInfo"></div>
 
-      <!-- Recipe Grid -->
       <div class="recipes-grid" id="recipesGrid"></div>
 
-      <!-- Empty State -->
       <div class="empty-state hidden" id="emptyState">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -92,14 +85,12 @@
 
     </main>
 
-    <!-- ===== FAB ===== -->
     <button class="fab" id="fabBtn" aria-label="Neues Rezept hinzufügen">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
     </button>
 
-    <!-- ===== RECIPE DETAIL OVERLAY ===== -->
     <div class="overlay hidden" id="recipeOverlay" role="dialog" aria-modal="true">
       <div class="overlay-backdrop" id="recipeBackdrop"></div>
       <div class="overlay-sheet recipe-sheet" id="recipeSheet">
@@ -128,7 +119,6 @@
             </div>
           </div>
 
-          <!-- Portions Calculator -->
           <div class="section-card">
             <div class="portions-row">
               <div class="portions-label">
@@ -148,7 +138,6 @@
             </div>
           </div>
 
-          <!-- Ingredients -->
           <div class="section-card">
             <div class="section-header">
               <h3>Zutaten</h3>
@@ -164,13 +153,11 @@
             <ul class="ingredients-list" id="detailIngredients"></ul>
           </div>
 
-          <!-- Steps -->
           <div class="section-card">
             <h3>Zubereitung</h3>
             <ol class="steps-list" id="detailSteps"></ol>
           </div>
 
-          <!-- Family Pinboard -->
           <div class="section-card pinboard-card">
             <h3>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -194,7 +181,6 @@
       </div>
     </div>
 
-    <!-- ===== SHOPPING LIST PANEL ===== -->
     <div class="overlay hidden" id="shoppingOverlay" role="dialog" aria-modal="true">
       <div class="overlay-backdrop" id="shoppingBackdrop"></div>
       <div class="overlay-sheet shopping-sheet" id="shoppingSheet">
@@ -244,7 +230,6 @@
       </div>
     </div>
 
-    <!-- ===== ADD RECIPE OVERLAY ===== -->
     <div class="overlay hidden" id="addRecipeOverlay" role="dialog" aria-modal="true">
       <div class="overlay-backdrop" id="addRecipeBackdrop"></div>
       <div class="overlay-sheet add-recipe-sheet" id="addRecipeSheet">
@@ -322,6 +307,9 @@
       </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script src="app.js"></script>
   </body>
 </html>
