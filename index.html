@@ -4,21 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#E85D4A" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Familien-Kochbuch</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
 </head>
   <body>
     <header class="app-header">
       <div class="header-inner">
         <div class="header-brand">
-          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
           <h1 class="brand-title">Kochbuch</h1>
         </div>
-        <button class="cart-btn" id="cartBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span class="cart-badge hidden" id="cartBadge">0</span></button>
+        <div class="header-actions">
+          <button class="icon-btn" id="openPlannerBtn" aria-label="Wochenplan">📅</button>
+          <button class="cart-btn" id="cartBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            <span class="cart-badge hidden" id="cartBadge">0</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -30,70 +32,58 @@
       </div>
 
       <div class="search-section">
-        <div class="search-input-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="search" id="searchInput" class="search-input" placeholder="Was kochen wir?" autocomplete="off" />
-        </div>
-        <button id="randomBtn" class="time-tag" style="width: 100%; margin-top: 10px; justify-content: center; background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 12px; font-weight: 600;">
-          🎲 Was kochen wir heute?
-        </button>
+        <input type="search" id="searchInput" class="search-input" placeholder="Was kochen wir?" />
+        <button id="randomBtn" class="random-dice-btn">🎲 Was kochen wir heute?</button>
       </div>
 
       <div class="results-info" id="resultsInfo"></div>
       <div class="recipes-grid" id="recipesGrid"></div>
-      <div class="empty-state hidden" id="emptyState"><p>Keine Rezepte gefunden</p></div>
     </main>
 
-    <button class="fab" id="fabBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    <button class="fab" id="fabBtn">+</button>
 
-    <div class="overlay hidden" id="recipeOverlay">
+    <div class="overlay hidden" id="plannerOverlay">
       <div class="overlay-backdrop"></div>
-      <div class="overlay-sheet recipe-sheet" id="recipeSheet">
-        <div class="sheet-drag-handle"></div>
-        <div class="sheet-scroll">
-          <div class="recipe-hero">
-            <img id="detailImage" src="" />
-            <button class="sheet-close-btn" id="closeRecipe">✕</button>
-            <div class="recipe-hero-meta">
-              <span class="recipe-category-tag" id="detailCategory"></span>
-              <h2 class="recipe-detail-title" id="detailTitle"></h2>
-              <div id="detailDurationText" style="color:white; font-size: 0.9rem;"></div>
-            </div>
-          </div>
-          <div class="section-card">
-            <div class="portions-row">
-              <span>Portionen</span>
-              <div class="portions-stepper">
-                <button class="stepper-btn" id="portionsMinus">−</button>
-                <span id="portionsCount">4</span>
-                <button class="stepper-btn" id="portionsPlus">+</button>
-              </div>
-            </div>
-          </div>
-          <div class="section-card"><h3>Zutaten</h3><ul class="ingredients-list" id="detailIngredients"></ul></div>
-          <div class="section-card"><h3>Zubereitung</h3><ol class="steps-list" id="detailSteps"></ol></div>
-          <div style="height: 100px;"></div>
+      <div class="overlay-sheet">
+        <div class="panel-header">
+          <h2>Wochenplan</h2>
+          <button class="close-overlay">✕</button>
         </div>
+        <div class="panel-scroll" id="plannerDisplay">
+          </div>
+        <button id="clearPlannerBtn" class="btn-secondary">Plan leeren</button>
       </div>
     </div>
 
-    <div class="overlay hidden" id="addRecipeOverlay">
+    <div class="overlay hidden" id="recipeOverlay">
       <div class="overlay-backdrop"></div>
-      <div class="overlay-sheet add-recipe-sheet">
-        <div class="panel-header"><h2>Rezept</h2><button id="closeAddRecipeBtn">✕</button></div>
+      <div class="overlay-sheet">
+        <div class="recipe-hero">
+          <img id="detailImage" src="" />
+          <button class="close-overlay">✕</button>
+        </div>
         <div class="panel-scroll">
-          <form id="addRecipeForm">
-            <input type="text" id="newTitle" placeholder="Titel" />
-            <select id="newCategory"><option value="Phil">Phil</option><option value="Zusammen">Zusammen</option></select>
-            <input type="number" id="newDuration" placeholder="Dauer (Min)" />
-            <input type="number" id="newServings" value="4" />
-            <input type="url" id="newImage" placeholder="Bild-URL" />
-            <div id="ingredientBuilder"></div>
-            <button type="button" id="addIngredientBtn">+ Zutat</button>
-            <div id="stepsBuilder"></div>
-            <button type="button" id="addStepBtn">+ Schritt</button>
-            <div class="form-actions"><button type="submit" class="btn-primary">Speichern</button></div>
-          </form>
+          <h2 id="detailTitle"></h2>
+          
+          <div class="planner-add-box">
+            <select id="daySelector">
+              <option value="">Tag wählen...</option>
+              <option value="Mo">Montag</option><option value="Di">Dienstag</option>
+              <option value="Mi">Mittwoch</option><option value="Do">Donnerstag</option>
+              <option value="Fr">Freitag</option><option value="Sa">Samstag</option>
+              <option value="So">Sonntag</option>
+            </select>
+            <button id="addToPlannerBtn">Einplanen</button>
+          </div>
+
+          <div class="portions-calc">
+            <span>Portionen:</span>
+            <button id="portionsMinus">−</button>
+            <span id="portionsCount">4</span>
+            <button id="portionsPlus">+</button>
+          </div>
+          <ul id="detailIngredients"></ul>
+          <ol id="detailSteps"></ol>
         </div>
       </div>
     </div>
