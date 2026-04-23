@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#d4622a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1103,7 +1103,7 @@ Regeln:
     --r: 16px; --rs: 10px;
     --font: Georgia, serif; --ui: system-ui, -apple-system, sans-serif;
   }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--ui); overflow: hidden; }
+  html, body { height: 100%; width: 100%; max-width: 100%; background: var(--bg); color: var(--text); font-family: var(--ui); overflow: hidden; overscroll-behavior: none; }
   #app { display: flex; flex-direction: column; height: 100dvh; max-width: 480px; margin: 0 auto; background: var(--surface); box-shadow: 0 0 40px rgba(0,0,0,.1); overflow: hidden; }
 
   /* Install Banner */
@@ -1117,7 +1117,7 @@ Regeln:
 
   /* Tabs */
   .tabs-wrapper { flex: 1; overflow: hidden; }
-  .tab-content { display: none; height: 100%; overflow-y: auto; padding: 12px; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+  .tab-content { display: none; height: 100%; overflow-y: auto; overflow-x: hidden; padding: 12px; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
   .tab-content.active { display: flex; }
 
   /* Nav */
@@ -1198,7 +1198,7 @@ Regeln:
   /* Modals */
   .modal { position: fixed; inset: 0; z-index: 100; display: none; flex-direction: column; background: rgba(0,0,0,.5); }
   .modal.open { display: flex; }
-  .modal-sheet { margin-top: auto; background: var(--surface); border-radius: 24px 24px 0 0; max-height: 92dvh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  .modal-sheet { margin-top: auto; background: var(--surface); border-radius: 24px 24px 0 0; max-height: 92dvh; overflow-y: auto; overflow-x: hidden; padding: 20px; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
   .modal-header { display: flex; align-items: center; justify-content: space-between; }
   .modal-title { font-size: 20px; font-weight: 700; }
   .modal-close { border: none; background: var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -1262,8 +1262,8 @@ Regeln:
   .form-label { font-size: 13px; font-weight: 600; color: var(--muted); }
   input[type=text], input[type=number], input[type=url], textarea { border: 1.5px solid var(--border); border-radius: var(--rs); padding: 12px 14px; font-size: 15px; background: #fff; color: var(--text); width: 100%; outline: none; font-family: var(--ui); }
   input:focus, textarea:focus { border-color: var(--primary); }
-  .form-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .form-row input, .form-row textarea { flex: 1; width: auto; }
+  .form-row { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; overflow: hidden; }
+  .form-row input, .form-row textarea { flex: 1; width: auto; min-width: 0; }
   .kat-checks { display: flex; flex-wrap: wrap; gap: 8px; }
   .kat-label { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1.5px solid var(--border); padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 14px; }
   .kat-label:has(input:checked) { background: #fde8d8; border-color: var(--primary); color: var(--primary); }
