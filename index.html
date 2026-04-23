@@ -730,17 +730,56 @@ ${r.notizen ? `<h2>Notizen</h2><p>${r.notizen}</p>` : ''}
     document.getElementById('geminiKeyStatus').style.color = 'green';
   };
 
+  window.saveImgbbKey = () => {
+    const key = document.getElementById('imgbbKeyInput').value.trim();
+    if (!key) { alert('Bitte einen Key eingeben!'); return; }
+    localStorage.setItem('imgbbKey', key);
+    document.getElementById('imgbbKeyInput').value = '';
+    document.getElementById('imgbbKeyInput').placeholder = '●●●●●●●●●●●●●●●●';
+    document.getElementById('imgbbKeyStatus').textContent = '✅ Key gespeichert – Bilder-Upload ist aktiv!';
+    document.getElementById('imgbbKeyStatus').style.color = 'green';
+  };
+
+  // imgBB Upload Funktion
+  async function uploadToImgbb(base64data) {
+    const key = localStorage.getItem('imgbbKey');
+    if (!key) return null;
+    try {
+      const base64 = base64data.split(',')[1];
+      const formData = new FormData();
+      formData.append('key', key);
+      formData.append('image', base64);
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success) return data.data.url;
+      return null;
+    } catch (e) {
+      console.error('imgBB Upload Fehler:', e);
+      return null;
+    }
+  }
+
   // Beim Laden Key-Status anzeigen
   (function() {
-    const saved = localStorage.getItem('geminiKey');
-    if (saved) {
-      setTimeout(() => {
+    setTimeout(() => {
+      const geminiKey = localStorage.getItem('geminiKey');
+      if (geminiKey) {
         const inp = document.getElementById('geminiKeyInput');
         const status = document.getElementById('geminiKeyStatus');
         if (inp) inp.placeholder = '●●●●●●●●●●●●●●●●';
         if (status) { status.textContent = '✅ Key gespeichert – KI-Scan ist aktiv!'; status.style.color = 'green'; }
-      }, 500);
-    }
+      }
+      const imgbbKey = localStorage.getItem('imgbbKey');
+      if (imgbbKey) {
+        const inp = document.getElementById('imgbbKeyInput');
+        const status = document.getElementById('imgbbKeyStatus');
+        if (inp) inp.placeholder = '●●●●●●●●●●●●●●●●';
+        if (status) { status.textContent = '✅ Key gespeichert – Bilder-Upload ist aktiv!'; status.style.color = 'green'; }
+      }
+    }, 500);
   })();
 
   // ── KI Scan ───────────────────────────────────────────────
@@ -840,6 +879,16 @@ Regeln:
       if (!jsonMatch) throw new Error('Kein gültiges JSON in der Antwort');
 
       const recipe = JSON.parse(jsonMatch[0]);
+
+      // Bild zu imgBB hochladen wenn Key vorhanden
+      if (localStorage.getItem('imgbbKey') && compressed) {
+        document.getElementById('scanStatus').textContent = '⏳ Bild wird hochgeladen…';
+        const imageUrl = await uploadToImgbb(compressed);
+        if (imageUrl) {
+          document.getElementById('recipeImage').value = imageUrl;
+          document.getElementById('scanStatus').textContent = '✅ Rezept erkannt und Bild gespeichert!';
+        }
+      }
 
       // Formular ausfüllen
       if (recipe.title) document.getElementById('recipeName').value = recipe.title;
@@ -1194,6 +1243,19 @@ Regeln:
           </div>
         </div>
         <div id="geminiKeyStatus" style="font-size:13px;margin-top:6px;color:var(--muted)"></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">🖼️ imgBB Bilder-Upload</div>
+        <div class="settings-card-desc">Mit deinem imgBB API-Key werden Fotos automatisch hochgeladen und als Rezeptbild gespeichert. Kostenlos auf imgbb.com/api</div>
+        <div class="form-group" style="margin-top:12px">
+          <div class="form-label">imgBB API-Key</div>
+          <div style="display:flex;gap:8px">
+            <input type="password" id="imgbbKeyInput" placeholder="imgBB Key…" style="flex:1">
+            <button onclick="saveImgbbKey()" style="border:none;background:var(--primary);color:#fff;padding:0 16px;border-radius:var(--rs);font-size:14px;cursor:pointer;white-space:nowrap">Speichern</button>
+          </div>
+        </div>
+        <div id="imgbbKeyStatus" style="font-size:13px;margin-top:6px;color:var(--muted)"></div>
       </div>
 
       <div class="settings-card">
