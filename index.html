@@ -719,8 +719,7 @@ ${r.notizen ? `<h2>Notizen</h2><p>${r.notizen}</p>` : ''}
     link.click();
   };
 
-  // ── Gemini Key
- ────────────────────────────────────────────
+  // ── Gemini Key ────────────────────────────────────────────
   window.saveGeminiKey = () => {
     const key = document.getElementById('geminiKeyInput').value.trim();
     if (!key) { alert('Bitte einen Key eingeben!'); return; }
