@@ -562,6 +562,144 @@
   };
 
   renderShopping();
+  // Kalender beim Start initialisieren
+  setTimeout(() => renderKalender(), 800);
+
+  // ── Kalender ──────────────────────────────────────────────
+  let kalenderDate = new Date();
+
+  window.nachtraeglichEintragen = async () => {
+    if (!currentRecipe) return;
+    const input = document.getElementById('nachtraeglichDate');
+    document.getElementById('nachtraeglichModal').classList.add('open');
+    const today = new Date().toISOString().split('T')[0];
+    if (input) input.value = today;
+  };
+
+  window.confirmNachtraeglich = async () => {
+    const dateStr = document.getElementById('nachtraeglichDate').value;
+    if (!dateStr) { alert('Bitte ein Datum wählen!'); return; }
+    closeModal('nachtraeglichModal');
+    await saveToKalender(dateStr);
+  };
+
+  window.heuteGekocht = async () => {
+    if (!currentRecipe) return;
+    const today = new Date().toISOString().split('T')[0];
+    await saveToKalender(today);
+    const btn = document.querySelector('.gekocht-btn');
+    if (btn) {
+      btn.textContent = '✅ Eingetragen!';
+      btn.style.background = '#e8f5e9';
+      btn.style.borderColor = '#4caf50';
+      setTimeout(() => { btn.textContent = '✅ Heute gekocht!'; btn.style.background = ''; btn.style.borderColor = ''; }, 2000);
+    }
+  };
+
+  async function saveToKalender(dateStr) {
+    if (!currentRecipe) return;
+    const title = currentRecipe.title || currentRecipe.name || '?';
+    const emoji = currentRecipe.emoji || '🍳';
+    const zeit = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+    try {
+      const dayRef = doc(db, 'kalender', dateStr);
+      const { getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+      const daySnap = await getDoc(dayRef);
+      const existing = daySnap.exists() ? daySnap.data() : { gerichte: [], notiz: '' };
+      if (!existing.gerichte) existing.gerichte = [];
+      const alreadyIn = existing.gerichte.some(g => g.id === currentRecipe.id && g.datum === dateStr);
+      if (!alreadyIn) {
+        existing.gerichte.push({ id: currentRecipe.id, title, emoji, zeit, datum: dateStr });
+        await setDoc(dayRef, existing);
+      }
+      alert('✅ Im Kalender eingetragen für ' + dateStr.split('-').reverse().join('.'));
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  }
+
+  window.openDatePicker = () => {
+    if (!currentRecipe) return;
+    const dateStr = prompt('Datum eingeben (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!dateStr) return;
+    saveToKalender(dateStr);
+  };
+
+  window.kalenderPrevMonth = () => {
+    kalenderDate = new Date(kalenderDate.getFullYear(), kalenderDate.getMonth() - 1, 1);
+    renderKalender();
+  };
+
+  window.kalenderNextMonth = () => {
+    kalenderDate = new Date(kalenderDate.getFullYear(), kalenderDate.getMonth() + 1, 1);
+    renderKalender();
+  };
+
+  async function renderKalender() {
+    const year = kalenderDate.getFullYear();
+    const month = kalenderDate.getMonth();
+    const MONATE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+    document.getElementById('kalenderMonthLabel').textContent = MONATE[month] + ' ' + year;
+
+    const startStr = year + '-' + String(month+1).padStart(2,'0') + '-01';
+    const endStr = year + '-' + String(month+1).padStart(2,'0') + '-31';
+
+    let kalenderData = {};
+    try {
+      const { getDocs, collection: col } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+      const snap = await getDocs(col(db, 'kalender'));
+      snap.forEach(d => {
+        if (d.id >= startStr && d.id <= endStr) kalenderData[d.id] = d.data();
+      });
+    } catch(e) { console.log('Kalender Fehler:', e); }
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const startDow = firstDay === 0 ? 6 : firstDay - 1;
+    const today = new Date().toISOString().split('T')[0];
+
+    let html = '<div class="kalender-weekdays"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div><div class="kalender-days">';
+    for (let i = 0; i < startDow; i++) html += '<div class="kalender-day empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const data = kalenderData[dateStr];
+      const isToday = dateStr === today;
+      const hasFood = data && data.gerichte && data.gerichte.length > 0;
+      html += '<div class="kalender-day' + (isToday?' today':'') + (hasFood?' has-food':'') + '" onclick="openKalenderDay('' + dateStr + '')">'
+        + '<div class="kalender-day-num">' + d + '</div>'
+        + (hasFood ? '<div class="kalender-emojis">' + data.gerichte.map(g=>g.emoji).join('') + '</div>' : '')
+        + '</div>';
+    }
+    html += '</div>';
+    document.getElementById('kalenderGrid').innerHTML = html;
+  }
+
+  window.openKalenderDay = async (dateStr) => {
+    const { getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await getDoc(doc(db, 'kalender', dateStr));
+    const data = snap.exists() ? snap.data() : { gerichte: [], notiz: '' };
+    const [y,m,d] = dateStr.split('-');
+    document.getElementById('kalenderDayTitle').textContent = parseInt(d) + '.' + parseInt(m) + '.' + y;
+    document.getElementById('kalenderDayGerichte').innerHTML = data.gerichte && data.gerichte.length
+      ? data.gerichte.map(g => '<div class="kalender-detail-item">' + g.emoji + ' ' + g.title + ' <span style="color:var(--muted);font-size:12px">' + (g.zeit||'') + '</span></div>').join('')
+      : '<div class="no-content">Nichts eingetragen</div>';
+    document.getElementById('kalenderDayNotiz').value = data.notiz || '';
+    document.getElementById('kalenderDayModal').dataset.date = dateStr;
+    document.getElementById('kalenderDayModal').classList.add('open');
+  };
+
+  window.saveKalenderNotiz = async () => {
+    const modal = document.getElementById('kalenderDayModal');
+    const dateStr = modal.dataset.date;
+    const notiz = document.getElementById('kalenderDayNotiz').value.trim();
+    const { getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await getDoc(doc(db, 'kalender', dateStr));
+    const data = snap.exists() ? snap.data() : { gerichte: [], notiz: '' };
+    data.notiz = notiz;
+    await setDoc(doc(db, 'kalender', dateStr), data);
+    closeModal('kalenderDayModal');
+    renderKalender();
+  };
 
   // ── Drucken ───────────────────────────────────────────────
   window.printRecipe = () => {
@@ -1331,7 +1469,10 @@ Regeln:
       <button class="share-btn" onclick="printRecipe()" title="Drucken">🖨️</button>
       <button class="share-btn" onclick="saveAsImage()" title="Als Bild">🖼️</button>
     </div>
-    <button class="gekocht-btn" onclick="heuteGekocht()">✅ Heute gekocht!</button>
+    <div style="display:flex;gap:8px">
+      <button class="gekocht-btn" onclick="heuteGekocht()" style="flex:1">✅ Heute gekocht!</button>
+      <button class="gekocht-btn" onclick="nachtraeglichEintragen()" style="flex:0 0 auto;font-size:13px;padding:12px 10px" title="Nachträglich eintragen">📅 Datum wählen</button>
+    </div>
     <div class="portion-control">
       <button class="portion-btn" onclick="changePortion(-1)">−</button>
       <div><div class="portion-count" id="portionCount">4</div><div class="portion-label">Portionen</div></div>
@@ -1426,6 +1567,21 @@ Regeln:
     <div class="form-group"><div class="form-label">📝 Notizen</div><textarea id="recipeNotizen" placeholder="Tipps, Variationen…" rows="3"></textarea></div>
     <button class="btn-primary" onclick="saveRecipe()">💾 Speichern</button>
     <button class="btn-secondary" onclick="closeModal('formModal')">Abbrechen</button>
+  </div>
+</div>
+
+<!-- Nachträglich Modal -->
+<div class="modal" id="nachtraeglichModal">
+  <div class="modal-sheet" style="max-height:50dvh">
+    <div class="modal-header">
+      <div class="modal-title">📅 Datum wählen</div>
+      <button class="modal-close" onclick="closeModal('nachtraeglichModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Wann wurde das Rezept gekocht?</div>
+      <input type="date" id="nachtraeglichDate" style="font-size:16px;padding:14px">
+    </div>
+    <button class="btn-primary" onclick="confirmNachtraeglich()">✅ Eintragen</button>
   </div>
 </div>
 
