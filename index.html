@@ -400,11 +400,11 @@
         document.getElementById('photoPreview').src = capturedImageData;
         document.getElementById('photoPreviewWrap').style.display = 'block';
         document.getElementById('recipeImage').value = '';
-        document.getElementById('recipeImage').placeholder = '📸 Foto gespeichert';
+        document.getElementById('recipeImage').placeholder = '📸 Foto (nur Vorschau - wird nicht gespeichert)';
 
         // Info anzeigen
         const kb = Math.round(capturedImageData.length * 0.75 / 1024);
-        document.getElementById('photoSizeInfo').textContent = `✅ Bild bereit (ca. ${kb} KB)`;
+        document.getElementById('photoSizeInfo').textContent = `⚠️ Foto nur als Vorschau (${kb} KB) – für dauerhaftes Speichern bitte Bild-URL eingeben`;
       };
       img.src = ev.target.result;
     };
@@ -496,7 +496,9 @@
     const name = document.getElementById('recipeName').value.trim();
     if (!name) { alert('Bitte einen Namen eingeben!'); return; }
     const category = [...document.querySelectorAll('.kat-checkbox:checked')].map(c => c.value).join(', ');
-    const imageUrl = capturedImageData || document.getElementById('recipeImage').value.trim();
+    // Nur URL speichern - niemals data:image (zu groß für Firebase!)
+    const urlInput = document.getElementById('recipeImage').value.trim();
+    const imageUrl = (urlInput && !urlInput.startsWith('data:')) ? urlInput : '';
     const data = {
       title: name,
       emoji: document.getElementById('recipeEmoji').value || '🍳',
@@ -1266,7 +1268,7 @@ Regeln:
 
     <!-- Kamera / Bild -->
     <div class="form-group">
-      <div class="form-label">📸 Bild</div>
+      <div class="form-label">📸 Bild-URL (empfohlen)</div>
       <div class="camera-section">
         <div id="photoPreviewWrap">
           <img id="photoPreview" src="" alt="Vorschau">
