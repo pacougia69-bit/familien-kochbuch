@@ -42,9 +42,13 @@
   // ── Firebase ──────────────────────────────────────────────
   const q = collection(db, 'recipes');
   onSnapshot(q, snap => {
+    document.getElementById('firebaseStatus').style.display = 'none';
     allRecipes = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.title||a.name||'').localeCompare(b.title||b.name||''));
     renderRecipes();
     renderWeekPlan();
+  }, err => {
+    document.getElementById('firebaseStatus').style.display = 'block';
+    document.getElementById('firebaseStatus').textContent = '❌ Firebase Fehler: ' + err.message;
   });
 
   // ── Filter & Search ───────────────────────────────────────
@@ -1115,6 +1119,7 @@ Regeln:
         <button class="filter-btn" data-filter="Vegetarisch" onclick="setFilter('Vegetarisch')">🥦 Vegetarisch</button>
         <button id="timeFilterBtn" onclick="toggleTimeFilter()">⏱ &lt; 30 Min</button>
       </div>
+      <div id="firebaseStatus" style="display:none;background:#fde8e8;color:#c0392b;padding:12px;border-radius:10px;font-size:13px;margin-top:8px"></div>
       <div id="recipeGrid"></div>
     </div>
 
