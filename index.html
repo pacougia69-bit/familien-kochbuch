@@ -36,19 +36,30 @@
   let shoppingList = JSON.parse(localStorage.getItem('shoppingList') || '[]');
   let freeNotes = JSON.parse(localStorage.getItem('freeNotes') || '[]');
   let weekPlan = JSON.parse(localStorage.getItem('weekPlan') || '{}');
-  let capturedImageData = null; // Kamera-Foto als Data-URL
+  let capturedImageData = null;
   const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 
-  // ── Firebase ──────────────────────────────────────────────
+  // ── Firebase mit Timeout-Erkennung ────────────────────────
+  let firebaseLoaded = false;
+  setTimeout(() => {
+    if (!firebaseLoaded) {
+      document.getElementById('firebaseStatus').style.display = 'block';
+      document.getElementById('firebaseStatus').innerHTML = '⚠️ Firebase lädt nicht. Mögliche Ursachen:<br>1. Internetverbindung prüfen<br>2. Firebase Regeln prüfen<br>3. Seite neu laden';
+    }
+  }, 5000);
+
   const q = collection(db, 'recipes');
   onSnapshot(q, snap => {
+    firebaseLoaded = true;
     document.getElementById('firebaseStatus').style.display = 'none';
     allRecipes = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.title||a.name||'').localeCompare(b.title||b.name||''));
     renderRecipes();
     renderWeekPlan();
   }, err => {
+    firebaseLoaded = true;
     document.getElementById('firebaseStatus').style.display = 'block';
-    document.getElementById('firebaseStatus').textContent = '❌ Firebase Fehler: ' + err.message;
+    document.getElementById('firebaseStatus').innerHTML = '❌ Firebase Fehler: ' + err.code + '<br>' + err.message;
+    console.error('Firebase error:', err);
   });
 
   // ── Filter & Search ───────────────────────────────────────
