@@ -153,7 +153,7 @@
       r.portionen ? `👤 ${r.portionen * portionMultiplier} Port.` : '',
       r.category || ''
     ].filter(Boolean).join('  ·  ');
-    document.getElementById('portionCount').textContent = r.portionen ? r.portionen * portionMultiplier : 1;
+    document.getElementById('portionCount').textContent = Math.round((r.portionen || 1) * portionMultiplier);
 
     const zutaten = r.ingredients || r.zutaten || [];
     document.getElementById('ingredientsList').innerHTML = zutaten.length
@@ -427,13 +427,17 @@
 
   function renderFormZutaten() {
     document.getElementById('zutatenContainer').innerHTML = formZutaten.map((z, i) => `
-      <div class="form-row">
-        <input type="number" placeholder="Menge" value="${z.menge || ''}" oninput="formZutaten[${i}].menge=parseFloat(this.value)||0" style="width:68px">
-        <input type="text" placeholder="Einheit" value="${z.einheit || ''}" oninput="formZutaten[${i}].einheit=this.value" style="width:68px">
-        <input type="text" placeholder="Zutat" value="${z.name || ''}" oninput="formZutaten[${i}].name=this.value" style="flex:1">
+      <div class="form-row" data-idx="${i}">
+        <input type="number" placeholder="Menge" value="${z.menge || ''}" onchange="updateZutat(${i},'menge',this.value)" style="width:68px">
+        <input type="text" placeholder="Einheit" value="${z.einheit || ''}" onchange="updateZutat(${i},'einheit',this.value)" style="width:68px">
+        <input type="text" placeholder="Zutat" value="${z.name || ''}" onchange="updateZutat(${i},'name',this.value)" style="flex:1">
         <button class="btn-icon danger" onclick="removeZutat(${i})">✕</button>
       </div>`).join('');
   }
+  window.updateZutat = (i, field, val) => {
+    if (!formZutaten[i]) return;
+    formZutaten[i][field] = field === 'menge' ? (parseFloat(val) || 0) : val;
+  };
   window.addZutat = () => { formZutaten.push({ menge: 0, einheit: '', name: '' }); renderFormZutaten(); };
   window.removeZutat = i => { formZutaten.splice(i, 1); renderFormZutaten(); };
 
@@ -441,10 +445,11 @@
     document.getElementById('schritteContainer').innerHTML = formSchritte.map((s, i) => `
       <div class="form-row">
         <span class="step-num">${i + 1}</span>
-        <textarea oninput="formSchritte[${i}]=this.value" style="flex:1;min-height:60px">${s}</textarea>
+        <textarea onchange="updateSchritt(${i},this.value)" style="flex:1;min-height:60px">${s}</textarea>
         <button class="btn-icon danger" onclick="removeSchritt(${i})">✕</button>
       </div>`).join('');
   }
+  window.updateSchritt = (i, val) => { if (formSchritte[i] !== undefined) formSchritte[i] = val; };
   window.addSchritt = () => { formSchritte.push(''); renderFormSchritte(); };
   window.removeSchritt = i => { formSchritte.splice(i, 1); renderFormSchritte(); };
 
@@ -772,7 +777,7 @@
 </div>
 
 <!-- Versteckter Kamera-Input -->
-<input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="onPhotoSelected(event)">
+<input type="file" id="cameraInput" accept="image/*" style="display:none" onchange="onPhotoSelected(event)">
 
 <!-- Detail Modal -->
 <div class="modal" id="detailModal">
@@ -844,10 +849,9 @@
           <button id="removePhoto" onclick="removePhoto()">✕</button>
         </div>
         <div class="camera-btns">
-          <button type="button" onclick="triggerCamera()">📷 Foto aufnehmen</button>
-          <button type="button" onclick="document.getElementById('cameraInput').removeAttribute('capture');document.getElementById('cameraInput').click()">🖼 Aus Galerie</button>
+          <button type="button" onclick="document.getElementById('cameraInput').click()">📷 Foto / Galerie wählen</button>
         </div>
-        <input type="url" id="recipeImage" placeholder="…oder Bild-URL eingeben">
+        <input type="text" id="recipeImage" placeholder="…oder Bild-URL eingeben (https://…)">
       </div>
     </div>
 
