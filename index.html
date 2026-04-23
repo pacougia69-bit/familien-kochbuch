@@ -12,7 +12,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, getDoc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCp7M97mA2gbkevQNni_6RIo6XNpLJLOgc",
@@ -603,7 +603,6 @@
     const zeit = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
     try {
       const dayRef = doc(db, 'kalender', dateStr);
-      const { getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
       const daySnap = await getDoc(dayRef);
       const existing = daySnap.exists() ? daySnap.data() : { gerichte: [], notiz: '' };
       if (!existing.gerichte) existing.gerichte = [];
@@ -646,8 +645,7 @@
 
     let kalenderData = {};
     try {
-      const { getDocs, collection: col } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-      const snap = await getDocs(col(db, 'kalender'));
+      const snap = await getDocs(collection(db, 'kalender'));
       snap.forEach(d => {
         if (d.id >= startStr && d.id <= endStr) kalenderData[d.id] = d.data();
       });
@@ -675,7 +673,6 @@
   }
 
   window.openKalenderDay = async (dateStr) => {
-    const { getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
     const snap = await getDoc(doc(db, 'kalender', dateStr));
     const data = snap.exists() ? snap.data() : { gerichte: [], notiz: '' };
     const [y,m,d] = dateStr.split('-');
@@ -692,7 +689,6 @@
     const modal = document.getElementById('kalenderDayModal');
     const dateStr = modal.dataset.date;
     const notiz = document.getElementById('kalenderDayNotiz').value.trim();
-    const { getDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
     const snap = await getDoc(doc(db, 'kalender', dateStr));
     const data = snap.exists() ? snap.data() : { gerichte: [], notiz: '' };
     data.notiz = notiz;
