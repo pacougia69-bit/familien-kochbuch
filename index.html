@@ -545,7 +545,165 @@
 
   renderShopping();
 
-  // ── Gemini Key ────────────────────────────────────────────
+  // ── Drucken ───────────────────────────────────────────────
+  window.printRecipe = () => {
+    const r = currentRecipe;
+    if (!r) return;
+    const title = r.title || r.name || '?';
+    const zutaten = (r.ingredients || r.zutaten || []);
+    const schritte = (r.steps || r.schritte || []);
+
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>${title}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 600px; margin: 20px auto; padding: 20px; color: #2c1a0e; }
+  h1 { font-size: 28px; margin-bottom: 4px; color: #d4622a; }
+  .meta { color: #8a6a52; font-size: 14px; margin-bottom: 20px; }
+  h2 { font-size: 16px; text-transform: uppercase; letter-spacing: 1px; color: #8a6a52; border-bottom: 1px solid #e8d5c0; padding-bottom: 4px; margin-top: 24px; }
+  ul { padding-left: 0; list-style: none; }
+  ul li { padding: 6px 0; border-bottom: 1px solid #f0e6d8; font-size: 15px; }
+  ol { padding-left: 20px; }
+  ol li { padding: 8px 0; font-size: 15px; line-height: 1.5; }
+  @media print { body { margin: 0; } }
+</style>
+</head><body>
+<h1>${title}</h1>
+<div class="meta">${r.duration ? '⏱ ' + r.duration + ' Min  · ' : ''}${r.portionen ? '👤 ' + r.portionen + ' Portionen  · ' : ''}${r.category || ''}</div>
+<h2>Zutaten</h2>
+<ul>${zutaten.map(z => `<li><strong>${z.menge ? z.menge + ' ' + (z.einheit||'') : ''}</strong> ${z.name}</li>`).join('')}</ul>
+<h2>Zubereitung</h2>
+<ol>${schritte.map(s => `<li>${s}</li>`).join('')}</ol>
+${r.notizen ? `<h2>Notizen</h2><p>${r.notizen}</p>` : ''}
+</body></html>`);
+    printWin.document.close();
+    setTimeout(() => { printWin.focus(); printWin.print(); }, 400);
+  };
+
+  // ── Als Bild speichern ────────────────────────────────────
+  window.saveAsImage = async () => {
+    const r = currentRecipe;
+    if (!r) return;
+    const title = r.title || r.name || '?';
+    const zutaten = (r.ingredients || r.zutaten || []);
+    const schritte = (r.steps || r.schritte || []);
+
+    // Canvas erstellen
+    const W = 800;
+    const padding = 40;
+    const lineH = 28;
+
+    // Erst Höhe berechnen
+    const lines = [];
+    lines.push({ type: 'title', text: title });
+    lines.push({ type: 'meta', text: [r.duration ? '⏱ ' + r.duration + ' Min' : '', r.portionen ? '👤 ' + r.portionen + ' Port.' : '', r.category || ''].filter(Boolean).join('  ·  ') });
+    lines.push({ type: 'gap' });
+    lines.push({ type: 'heading', text: '🥕 ZUTATEN' });
+    zutaten.forEach(z => lines.push({ type: 'item', text: (z.menge ? z.menge + ' ' + (z.einheit||'') + '  ' : '') + z.name }));
+    lines.push({ type: 'gap' });
+    lines.push({ type: 'heading', text: '👨‍🍳 ZUBEREITUNG' });
+    schritte.forEach((s, i) => lines.push({ type: 'step', num: i+1, text: s }));
+
+    const H = padding * 2 + lines.reduce((acc, l) => {
+      if (l.type === 'title') return acc + 52;
+      if (l.type === 'meta') return acc + 30;
+      if (l.type === 'gap') return acc + 16;
+      if (l.type === 'heading') return acc + 36;
+      if (l.type === 'step') return acc + Math.ceil(l.text.length / 55) * lineH + 10;
+      return acc + lineH;
+    }, 0) + 40;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Hintergrund
+    ctx.fillStyle = '#fff9f2';
+    ctx.fillRect(0, 0, W, H);
+
+    // Dekostreifen oben
+    ctx.fillStyle = '#d4622a';
+    ctx.fillRect(0, 0, W, 8);
+
+    let y = padding + 20;
+
+    lines.forEach(l => {
+      if (l.type === 'title') {
+        ctx.fillStyle = '#d4622a';
+        ctx.font = 'bold 36px Georgia, serif';
+        ctx.fillText(l.text, padding, y);
+        y += 52;
+      } else if (l.type === 'meta') {
+        ctx.fillStyle = '#8a6a52';
+        ctx.font = '16px system-ui, sans-serif';
+        ctx.fillText(l.text, padding, y);
+        y += 30;
+      } else if (l.type === 'gap') {
+        y += 16;
+      } else if (l.type === 'heading') {
+        ctx.fillStyle = '#8a6a52';
+        ctx.font = 'bold 13px system-ui, sans-serif';
+        ctx.fillText(l.text, padding, y);
+        // Linie
+        ctx.strokeStyle = '#e8d5c0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, y + 6);
+        ctx.lineTo(W - padding, y + 6);
+        ctx.stroke();
+        y += 36;
+      } else if (l.type === 'step') {
+        // Nummer-Kreis
+        ctx.fillStyle = '#d4622a';
+        ctx.beginPath();
+        ctx.arc(padding + 12, y - 6, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(l.num, padding + 12, y - 2);
+        ctx.textAlign = 'left';
+        // Text umbrechen
+        ctx.fillStyle = '#2c1a0e';
+        ctx.font = '15px system-ui, sans-serif';
+        const words = l.text.split(' ');
+        let line = '';
+        let tx = padding + 32;
+        let ty = y;
+        words.forEach(w => {
+          const test = line + w + ' ';
+          if (ctx.measureText(test).width > W - tx - padding && line) {
+            ctx.fillText(line, tx, ty);
+            line = w + ' ';
+            ty += lineH;
+          } else { line = test; }
+        });
+        ctx.fillText(line, tx, ty);
+        y = ty + lineH + 10;
+      } else {
+        ctx.fillStyle = '#2c1a0e';
+        ctx.font = '15px system-ui, sans-serif';
+        ctx.fillText(l.text, padding + 12, y);
+        y += lineH;
+      }
+    });
+
+    // Dekostreifen unten
+    ctx.fillStyle = '#d4622a';
+    ctx.fillRect(0, H - 8, W, 8);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = title.replace(/[^a-zA-Z0-9äöüÄÖÜ]/g, '_') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  // ── Gemini Key
+ ────────────────────────────────────────────
   window.saveGeminiKey = () => {
     const key = document.getElementById('geminiKeyInput').value.trim();
     if (!key) { alert('Bitte einen Key eingeben!'); return; }
@@ -626,7 +784,7 @@ Regeln:
 - Wenn du etwas nicht lesen kannst, schreibe "unleserlich"`;
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1046,6 +1204,8 @@ Regeln:
     <div class="detail-action-row">
       <button class="cook-mode-btn" id="cookModeBtn" onclick="openCookMode()" style="display:none">👨‍🍳 Koch-Modus</button>
       <button class="share-btn" onclick="shareRecipe()" title="Rezept teilen">📤</button>
+      <button class="share-btn" onclick="printRecipe()" title="Drucken / Als PDF speichern">🖨️</button>
+      <button class="share-btn" onclick="saveAsImage()" title="Als Bild speichern">🖼️</button>
     </div>
     <div class="portion-control">
       <button class="portion-btn" onclick="changePortion(-1)">−</button>
