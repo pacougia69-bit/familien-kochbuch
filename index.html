@@ -373,14 +373,40 @@
   window.onPhotoSelected = e => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Bild komprimieren bevor es gespeichert wird
     const reader = new FileReader();
     reader.onload = ev => {
-      capturedImageData = ev.target.result;
-      // Vorschau anzeigen
-      document.getElementById('photoPreview').src = capturedImageData;
-      document.getElementById('photoPreviewWrap').style.display = 'block';
-      document.getElementById('recipeImage').value = ''; // URL leeren
-      document.getElementById('recipeImage').placeholder = '📸 Foto aufgenommen';
+      const img = new Image();
+      img.onload = () => {
+        // Max 900px Breite/Höhe, Qualität 0.75
+        const MAX = 900;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        capturedImageData = canvas.toDataURL('image/jpeg', 0.75);
+
+        // Größe prüfen und nochmal komprimieren wenn nötig
+        if (capturedImageData.length > 800000) {
+          capturedImageData = canvas.toDataURL('image/jpeg', 0.5);
+        }
+
+        document.getElementById('photoPreview').src = capturedImageData;
+        document.getElementById('photoPreviewWrap').style.display = 'block';
+        document.getElementById('recipeImage').value = '';
+        document.getElementById('recipeImage').placeholder = '📸 Foto gespeichert';
+
+        // Info anzeigen
+        const kb = Math.round(capturedImageData.length * 0.75 / 1024);
+        document.getElementById('photoSizeInfo').textContent = `✅ Bild bereit (ca. ${kb} KB)`;
+      };
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   };
@@ -390,6 +416,7 @@
     document.getElementById('photoPreviewWrap').style.display = 'none';
     document.getElementById('cameraInput').value = '';
     document.getElementById('recipeImage').placeholder = 'https://…';
+    document.getElementById('photoSizeInfo').textContent = '';
   };
 
   // ── Recipe Form ───────────────────────────────────────────
@@ -404,6 +431,7 @@
     document.getElementById('recipePortionen').value = '4';
     document.getElementById('photoPreviewWrap').style.display = 'none';
     document.getElementById('recipeImage').placeholder = 'https://…';
+    document.getElementById('photoSizeInfo').textContent = '';
     document.querySelectorAll('.kat-checkbox').forEach(c => c.checked = false);
     renderFormZutaten(); renderFormSchritte();
     document.getElementById('formModal').classList.add('open');
@@ -859,6 +887,7 @@
           <img id="photoPreview" src="" alt="Vorschau">
           <button id="removePhoto" onclick="removePhoto()">✕</button>
         </div>
+        <div id="photoSizeInfo" style="font-size:12px;color:var(--muted);padding:2px 0"></div>
         <div class="camera-btns">
           <button type="button" onclick="openGallery()">🖼️ Bild aus Galerie</button>
           <button type="button" onclick="openCamera()">📷 Foto aufnehmen</button>
