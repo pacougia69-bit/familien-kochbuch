@@ -12,7 +12,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCp7M97mA2gbkevQNni_6RIo6XNpLJLOgc",
@@ -40,9 +40,9 @@
   const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 
   // ── Firebase ──────────────────────────────────────────────
-  const q = query(collection(db, 'recipes'), orderBy('title'));
+  const q = collection(db, 'recipes');
   onSnapshot(q, snap => {
-    allRecipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allRecipes = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.title||a.name||'').localeCompare(b.title||b.name||''));
     renderRecipes();
     renderWeekPlan();
   });
