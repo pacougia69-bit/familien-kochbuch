@@ -357,7 +357,18 @@
   };
 
   // ── Kamera / Foto ─────────────────────────────────────────
-  window.triggerCamera = () => document.getElementById('cameraInput').click();
+  window.openGallery = () => {
+    const inp = document.getElementById('cameraInput');
+    inp.removeAttribute('capture');
+    inp.accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/*';
+    inp.click();
+  };
+  window.openCamera = () => {
+    const inp = document.getElementById('cameraInput');
+    inp.setAttribute('capture', 'environment');
+    inp.accept = 'image/*';
+    inp.click();
+  };
 
   window.onPhotoSelected = e => {
     const file = e.target.files[0];
@@ -777,7 +788,7 @@
 </div>
 
 <!-- Versteckter Kamera-Input -->
-<input type="file" id="cameraInput" accept="image/*" style="display:none" onchange="onPhotoSelected(event)">
+<input type="file" id="cameraInput" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/*" style="display:none" onchange="onPhotoSelected(event)">
 
 <!-- Detail Modal -->
 <div class="modal" id="detailModal">
@@ -849,7 +860,8 @@
           <button id="removePhoto" onclick="removePhoto()">✕</button>
         </div>
         <div class="camera-btns">
-          <button type="button" onclick="document.getElementById('cameraInput').click()">📷 Foto / Galerie wählen</button>
+          <button type="button" onclick="openGallery()">🖼️ Bild aus Galerie</button>
+          <button type="button" onclick="openCamera()">📷 Foto aufnehmen</button>
         </div>
         <input type="text" id="recipeImage" placeholder="…oder Bild-URL eingeben (https://…)">
       </div>
