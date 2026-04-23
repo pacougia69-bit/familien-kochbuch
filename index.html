@@ -663,7 +663,7 @@
       const data = kalenderData[dateStr];
       const isToday = dateStr === today;
       const hasFood = data && data.gerichte && data.gerichte.length > 0;
-      html += '<div class="kalender-day' + (isToday?' today':'') + (hasFood?' has-food':'') + '" onclick="openKalenderDay('' + dateStr + '')">'
+      html += '<div class="kalender-day' + (isToday?' today':'') + (hasFood?' has-food':'') + '" onclick="openKalenderDay(\'' + dateStr + '\')">'
         + '<div class="kalender-day-num">' + d + '</div>'
         + (hasFood ? '<div class="kalender-emojis">' + data.gerichte.map(g=>g.emoji).join('') + '</div>' : '')
         + '</div>';
