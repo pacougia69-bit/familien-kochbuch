@@ -389,12 +389,10 @@
     const file = e.target.files[0];
     if (!file) return;
 
-    // Bild komprimieren bevor es gespeichert wird
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       const img = new Image();
-      img.onload = () => {
-        // Max 900px Breite/Höhe, Qualität 0.75
+      img.onload = async () => {
         const MAX = 900;
         let w = img.width, h = img.height;
         if (w > MAX || h > MAX) {
@@ -403,23 +401,30 @@
         }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         capturedImageData = canvas.toDataURL('image/jpeg', 0.75);
-
-        // Größe prüfen und nochmal komprimieren wenn nötig
         if (capturedImageData.length > 800000) {
           capturedImageData = canvas.toDataURL('image/jpeg', 0.5);
         }
 
+        // Vorschau anzeigen
         document.getElementById('photoPreview').src = capturedImageData;
         document.getElementById('photoPreviewWrap').style.display = 'block';
-        document.getElementById('recipeImage').value = '';
-        document.getElementById('recipeImage').placeholder = '📸 Foto (nur Vorschau - wird nicht gespeichert)';
 
-        // Info anzeigen
-        const kb = Math.round(capturedImageData.length * 0.75 / 1024);
-        document.getElementById('photoSizeInfo').textContent = `⚠️ Foto nur als Vorschau (${kb} KB) – für dauerhaftes Speichern bitte Bild-URL eingeben`;
+        // Zu imgBB hochladen
+        if (localStorage.getItem('imgbbKey')) {
+          document.getElementById('photoSizeInfo').textContent = '⏳ Bild wird hochgeladen…';
+          const imageUrl = await uploadToImgbb(capturedImageData);
+          if (imageUrl) {
+            document.getElementById('recipeImage').value = imageUrl;
+            capturedImageData = null;
+            document.getElementById('photoSizeInfo').textContent = '✅ Bild erfolgreich hochgeladen!';
+          } else {
+            document.getElementById('photoSizeInfo').textContent = '❌ Upload fehlgeschlagen – prüfe den imgBB Key in ⚙️';
+          }
+        } else {
+          document.getElementById('photoSizeInfo').textContent = '⚠️ Kein imgBB Key – bitte in ⚙️ Einstellungen eintragen!';
+        }
       };
       img.src = ev.target.result;
     };
