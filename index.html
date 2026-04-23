@@ -565,6 +565,110 @@
   // Kalender beim Start initialisieren
   setTimeout(() => renderKalender(), 800);
 
+  // ── URL Import ───────────────────────────────────────────
+  window.openUrlImport = () => {
+    const key = localStorage.getItem('geminiKey');
+    if (!key) {
+      alert('Bitte zuerst deinen Gemini API-Key in den Einstellungen (⚙️) eingeben!');
+      showTab('settings');
+      return;
+    }
+    document.getElementById('urlImportInput').value = '';
+    document.getElementById('urlImportStatus').style.display = 'none';
+    document.getElementById('urlImportModal').classList.add('open');
+  };
+
+  window.importFromUrl = async () => {
+    const url = document.getElementById('urlImportInput').value.trim();
+    if (!url) { alert('Bitte eine URL eingeben!'); return; }
+
+    const key = localStorage.getItem('geminiKey');
+    if (!key) return;
+
+    const status = document.getElementById('urlImportStatus');
+    status.style.display = 'block';
+    status.textContent = '⏳ Gemini liest das Rezept…';
+
+    try {
+      const prompt = `Bitte rufe diese Rezept-URL ab und extrahiere alle Rezeptinformationen: ${url}
+
+Antworte NUR mit einem JSON-Objekt (kein anderer Text, keine Backticks):
+{
+  "title": "Rezeptname",
+  "duration": 30,
+  "portionen": 4,
+  "category": "Zusammen",
+  "ingredients": [
+    {"menge": 200, "einheit": "g", "name": "Mehl"}
+  ],
+  "steps": [
+    "Erster Schritt",
+    "Zweiter Schritt"
+  ]
+}
+
+Regeln:
+- category: Phil, Zusammen, Schnell (< 30 Min), Vegetarisch oder leer
+- duration in Minuten als Zahl
+- menge als Zahl (0 wenn keine Menge)
+- Alle Texte auf Deutsch`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ url_context: {} }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 2000 }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || 'API Fehler');
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Kein Rezept gefunden');
+
+      const recipe = JSON.parse(jsonMatch[0]);
+
+      // Formular ausfüllen
+      if (recipe.title) document.getElementById('recipeName').value = recipe.title;
+      if (recipe.duration) document.getElementById('recipeDauer').value = recipe.duration;
+      if (recipe.portionen) document.getElementById('recipePortionen').value = recipe.portionen;
+      if (recipe.category) {
+        document.querySelectorAll('.kat-checkbox').forEach(c => {
+          c.checked = recipe.category.includes(c.value);
+        });
+      }
+      if (recipe.ingredients && recipe.ingredients.length > 0) {
+        formZutaten = recipe.ingredients.map(z => ({
+          menge: parseFloat(z.menge) || 0,
+          einheit: z.einheit || '',
+          name: z.name || ''
+        }));
+        renderFormZutaten();
+      }
+      if (recipe.steps && recipe.steps.length > 0) {
+        formSchritte = recipe.steps.filter(s => s.trim());
+        renderFormSchritte();
+      }
+
+      closeModal('urlImportModal');
+      status.style.display = 'none';
+
+    } catch(e) {
+      status.textContent = '❌ Fehler: ' + e.message;
+      status.style.color = 'red';
+    }
+  };
+
   // ── Kalender ──────────────────────────────────────────────
   let kalenderDate = new Date();
 
@@ -938,6 +1042,107 @@ ${r.notizen ? `<h2>Notizen</h2><p>${r.notizen}</p>` : ''}
       return;
     }
     document.getElementById('scanInputGallery').click();
+  };
+
+  window.importFromUrl = async () => {
+    const url = document.getElementById('urlImportInput').value.trim();
+    if (!url) { alert('Bitte eine URL eingeben!'); return; }
+    const key = localStorage.getItem('geminiKey');
+    if (!key) {
+      alert('Bitte zuerst deinen Gemini API-Key in den Einstellungen (⚙️) eingeben!');
+      showTab('settings');
+      return;
+    }
+
+    const status = document.getElementById('scanStatus');
+    const btn = document.querySelector('[onclick="importFromUrl()"]');
+    status.style.display = 'block';
+    status.textContent = '⏳ Rezept wird von der URL geladen…';
+    btn.disabled = true;
+    btn.textContent = '⏳';
+
+    try {
+      const prompt = `Bitte rufe den Inhalt dieser URL ab und extrahiere das Rezept: ${url}
+
+Antworte NUR mit einem JSON-Objekt (kein anderer Text, keine Markdown-Backticks):
+{
+  "title": "Rezeptname",
+  "duration": 30,
+  "portionen": 4,
+  "category": "",
+  "ingredients": [
+    {"menge": 200, "einheit": "g", "name": "Mehl"}
+  ],
+  "steps": [
+    "Erster Schritt",
+    "Zweiter Schritt"
+  ]
+}
+
+Regeln:
+- duration ist die Zubereitungszeit in Minuten als Zahl
+- portionen ist eine Zahl  
+- menge ist eine Zahl (0 wenn keine Menge)
+- category: Phil, Zusammen, Schnell (< 30 Min), Vegetarisch oder leer
+- Alles auf Deutsch`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ url_context: {} }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 2000 }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || 'API Fehler');
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Kein Rezept gefunden');
+      const recipe = JSON.parse(jsonMatch[0]);
+
+      // Formular füllen
+      if (recipe.title) document.getElementById('recipeName').value = recipe.title;
+      if (recipe.duration) document.getElementById('recipeDauer').value = recipe.duration;
+      if (recipe.portionen) document.getElementById('recipePortionen').value = recipe.portionen;
+      if (recipe.category) {
+        document.querySelectorAll('.kat-checkbox').forEach(c => {
+          c.checked = recipe.category.includes(c.value);
+        });
+      }
+      if (recipe.ingredients && recipe.ingredients.length > 0) {
+        formZutaten = recipe.ingredients.map(z => ({
+          menge: parseFloat(z.menge) || 0,
+          einheit: z.einheit || '',
+          name: z.name || ''
+        }));
+        renderFormZutaten();
+      }
+      if (recipe.steps && recipe.steps.length > 0) {
+        formSchritte = recipe.steps.filter(s => s.trim());
+        renderFormSchritte();
+      }
+
+      status.textContent = '✅ Rezept importiert! Bitte prüfen und speichern.';
+      status.style.color = 'green';
+      document.getElementById('urlImportInput').value = '';
+
+    } catch(err) {
+      status.textContent = '❌ Fehler: ' + err.message;
+      status.style.color = 'red';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔗 Import';
+    }
   };
 
   window.onScanPhoto = async (e) => {
@@ -1513,12 +1718,15 @@ Regeln:
       <button class="modal-close" onclick="closeModal('formModal')">✕</button>
     </div>
     <!-- KI Scan Buttons -->
-    <div style="display:flex;gap:8px">
-      <button type="button" class="scan-btn" id="scanBtn" onclick="startScanCamera()" style="flex:1;font-size:14px;padding:14px 8px">
-        📷 Kamera öffnen
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="scan-btn" id="scanBtn" onclick="startScanCamera()" style="flex:1;font-size:13px;padding:12px 6px;min-width:90px">
+        📷 Kamera
       </button>
-      <button type="button" class="scan-btn" onclick="startScanGallery()" style="flex:1;font-size:14px;padding:14px 8px;background:linear-gradient(135deg,#edf4ff,#dbeafe);border-color:#3b82f6;color:#1d4ed8">
-        🖼️ Aus Galerie
+      <button type="button" class="scan-btn" onclick="startScanGallery()" style="flex:1;font-size:13px;padding:12px 6px;min-width:90px;background:linear-gradient(135deg,#edf4ff,#dbeafe);border-color:#3b82f6;color:#1d4ed8">
+        🖼️ Galerie
+      </button>
+      <button type="button" class="scan-btn" onclick="openUrlImport()" style="flex:1;font-size:13px;padding:12px 6px;min-width:90px;background:linear-gradient(135deg,#edfdf4,#d1fae5);border-color:#16a34a;color:#15803d">
+        🔗 URL Import
       </button>
     </div>
     <input type="file" id="scanInput" accept="image/*" capture="environment" style="display:none" onchange="onScanPhoto(event)">
@@ -1563,6 +1771,26 @@ Regeln:
     <div class="form-group"><div class="form-label">📝 Notizen</div><textarea id="recipeNotizen" placeholder="Tipps, Variationen…" rows="3"></textarea></div>
     <button class="btn-primary" onclick="saveRecipe()">💾 Speichern</button>
     <button class="btn-secondary" onclick="closeModal('formModal')">Abbrechen</button>
+  </div>
+</div>
+
+<!-- URL Import Modal -->
+<div class="modal" id="urlImportModal">
+  <div class="modal-sheet" style="max-height:60dvh">
+    <div class="modal-header">
+      <div class="modal-title">🔗 Rezept von URL importieren</div>
+      <button class="modal-close" onclick="closeModal('urlImportModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Rezept-URL eingeben</div>
+      <input type="url" id="urlImportInput" placeholder="https://www.chefkoch.de/rezepte/…" style="font-size:14px">
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">
+        Funktioniert mit Chefkoch, Lecker.de, Allrecipes und vielen mehr
+      </div>
+    </div>
+    <div id="urlImportStatus" style="display:none;font-size:13px;color:var(--muted);padding:10px;background:#f5f5f5;border-radius:var(--rs);text-align:center"></div>
+    <button class="btn-primary" onclick="importFromUrl()">🔗 Rezept importieren</button>
+    <button class="btn-secondary" onclick="closeModal('urlImportModal')">Abbrechen</button>
   </div>
 </div>
 
