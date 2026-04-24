@@ -593,101 +593,107 @@
   renderShopping();
 
   // ── Bild Zuschneiden ─────────────────────────────────────
-  let cropData = { startX:0, startY:0, x:0, y:0, w:200, h:200, dragging:false, resizing:false, imgNaturalW:0, imgNaturalH:0 };
+  let cropSrc = null;
+  let cropSelection = null; // {x,y,w,h} in display pixels
+  let cropDrawing = false;
+  let cropStart = null;
 
   window.initCrop = (dataUrl) => {
+    cropSrc = dataUrl;
+    cropSelection = null;
     const img = document.getElementById('cropImage');
     img.src = dataUrl;
     img.onload = () => {
-      const container = document.getElementById('cropContainer');
-      const cw = container.offsetWidth;
-      const ch = img.offsetHeight;
-      cropData.imgNaturalW = img.naturalWidth;
-      cropData.imgNaturalH = img.naturalHeight;
-      // Initial crop box = center 70%
-      cropData.w = Math.round(cw * 0.7);
-      cropData.h = Math.round(ch * 0.7);
-      cropData.x = Math.round((cw - cropData.w) / 2);
-      cropData.y = Math.round((ch - cropData.h) / 2);
-      updateCropOverlay();
+      const canvas = document.getElementById('cropCanvas');
+      canvas.width = img.offsetWidth;
+      canvas.height = img.offsetHeight;
+      drawCropCanvas();
+      setupCropCanvas();
     };
     document.getElementById('cropModal').classList.add('open');
-    setupCropEvents();
   };
 
-  function updateCropOverlay() {
-    const ov = document.getElementById('cropOverlay');
-    ov.style.left = cropData.x + 'px';
-    ov.style.top = cropData.y + 'px';
-    ov.style.width = cropData.w + 'px';
-    ov.style.height = cropData.h + 'px';
+  function getCanvasPos(e, canvas) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
   }
 
-  function setupCropEvents() {
-    const ov = document.getElementById('cropOverlay');
-    const getPos = e => e.touches ? {x: e.touches[0].clientX, y: e.touches[0].clientY} : {x: e.clientX, y: e.clientY};
-    const container = document.getElementById('cropContainer');
-    const rect = () => container.getBoundingClientRect();
-
-    ov.addEventListener('mousedown', e => { cropData.dragging=true; cropData.startX=e.clientX-cropData.x; cropData.startY=e.clientY-cropData.y; e.preventDefault(); });
-    ov.addEventListener('touchstart', e => { cropData.dragging=true; const p=getPos(e); cropData.startX=p.x-cropData.x; cropData.startY=p.y-cropData.y; e.preventDefault(); }, {passive:false});
-
-    document.addEventListener('mousemove', e => {
-      if (!cropData.dragging) return;
-      const r = rect();
-      cropData.x = Math.max(0, Math.min(e.clientX - cropData.startX, r.width - cropData.w));
-      cropData.y = Math.max(0, Math.min(e.clientY - cropData.startY, document.getElementById('cropImage').offsetHeight - cropData.h));
-      updateCropOverlay();
-    });
-    document.addEventListener('touchmove', e => {
-      if (!cropData.dragging) return;
-      const p = getPos(e);
-      const r = rect();
-      cropData.x = Math.max(0, Math.min(p.x - cropData.startX, r.width - cropData.w));
-      cropData.y = Math.max(0, Math.min(p.y - cropData.startY, document.getElementById('cropImage').offsetHeight - cropData.h));
-      updateCropOverlay();
+  function setupCropCanvas() {
+    const canvas = document.getElementById('cropCanvas');
+    canvas.onmousedown = e => { cropDrawing=true; cropStart=getCanvasPos(e,canvas); cropSelection=null; e.preventDefault(); };
+    canvas.ontouchstart = e => { cropDrawing=true; cropStart=getCanvasPos(e,canvas); cropSelection=null; e.preventDefault(); };
+    canvas.onmousemove = e => {
+      if (!cropDrawing) return;
+      const pos = getCanvasPos(e,canvas);
+      cropSelection = { x:Math.min(cropStart.x,pos.x), y:Math.min(cropStart.y,pos.y), w:Math.abs(pos.x-cropStart.x), h:Math.abs(pos.y-cropStart.y) };
+      drawCropCanvas();
+    };
+    canvas.ontouchmove = e => {
+      if (!cropDrawing) return;
+      const pos = getCanvasPos(e,canvas);
+      cropSelection = { x:Math.min(cropStart.x,pos.x), y:Math.min(cropStart.y,pos.y), w:Math.abs(pos.x-cropStart.x), h:Math.abs(pos.y-cropStart.y) };
+      drawCropCanvas();
       e.preventDefault();
-    }, {passive:false});
-    document.addEventListener('mouseup', () => cropData.dragging = false);
-    document.addEventListener('touchend', () => cropData.dragging = false);
+    };
+    canvas.onmouseup = () => cropDrawing = false;
+    canvas.ontouchend = () => cropDrawing = false;
   }
 
-  window.cropImage = async () => {
-    const img = document.getElementById('cropImage');
-    const container = document.getElementById('cropContainer');
-    const displayW = container.offsetWidth;
-    const displayH = img.offsetHeight;
-    const scaleX = img.naturalWidth / displayW;
-    const scaleY = img.naturalHeight / displayH;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(cropData.w * scaleX);
-    canvas.height = Math.round(cropData.h * scaleY);
+  function drawCropCanvas() {
+    const canvas = document.getElementById('cropCanvas');
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(img,
-      cropData.x * scaleX, cropData.y * scaleY,
-      cropData.w * scaleX, cropData.h * scaleY,
-      0, 0, canvas.width, canvas.height
-    );
-    capturedImageData = canvas.toDataURL('image/jpeg', 0.85);
-    document.getElementById('cropModal').classList.remove('open');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if (cropSelection && cropSelection.w > 5 && cropSelection.h > 5) {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.clearRect(cropSelection.x, cropSelection.y, cropSelection.w, cropSelection.h);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cropSelection.x, cropSelection.y, cropSelection.w, cropSelection.h);
+    }
+  }
 
-    // Zu imgBB hochladen
-    document.getElementById('photoPreview').src = capturedImageData;
+  async function uploadCaptured(dataUrl, msg) {
+    document.getElementById('photoPreview').src = dataUrl;
     document.getElementById('photoPreviewWrap').style.display = 'block';
+    capturedImageData = dataUrl;
     if (localStorage.getItem('imgbbKey')) {
-      document.getElementById('photoSizeInfo').textContent = '⏳ Bild wird hochgeladen…';
-      const url = await uploadToImgbb(capturedImageData);
+      document.getElementById('photoSizeInfo').textContent = '⏳ ' + msg;
+      const url = await uploadToImgbb(dataUrl);
       if (url) {
         document.getElementById('recipeImage').value = url;
         capturedImageData = null;
-        document.getElementById('photoSizeInfo').textContent = '✅ Bild zugeschnitten & hochgeladen!';
+        document.getElementById('photoSizeInfo').textContent = '✅ Bild hochgeladen!';
       } else {
-        document.getElementById('photoSizeInfo').textContent = '❌ Upload fehlgeschlagen';
+        document.getElementById('photoSizeInfo').textContent = '❌ Upload fehlgeschlagen – prüfe imgBB Key in ⚙️';
       }
     } else {
-      document.getElementById('photoSizeInfo').textContent = '⚠️ Kein imgBB Key in ⚙️';
+      document.getElementById('photoSizeInfo').textContent = '⚠️ Kein imgBB Key in ⚙️ eintragen!';
     }
+  }
+
+  window.useFullImage = async () => {
+    document.getElementById('cropModal').classList.remove('open');
+    await uploadCaptured(cropSrc, 'Ganzes Bild wird hochgeladen…');
+  };
+
+  window.cropSelected = async () => {
+    if (!cropSelection || cropSelection.w < 10 || cropSelection.h < 10) {
+      alert('Bitte zuerst einen Bereich mit dem Finger/Maus auswählen!');
+      return;
+    }
+    const img = document.getElementById('cropImage');
+    const scaleX = img.naturalWidth / img.offsetWidth;
+    const scaleY = img.naturalHeight / img.offsetHeight;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(cropSelection.w * scaleX);
+    canvas.height = Math.round(cropSelection.h * scaleY);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, cropSelection.x*scaleX, cropSelection.y*scaleY, cropSelection.w*scaleX, cropSelection.h*scaleY, 0, 0, canvas.width, canvas.height);
+    const cropped = canvas.toDataURL('image/jpeg', 0.85);
+    document.getElementById('cropModal').classList.remove('open');
+    await uploadCaptured(cropped, 'Zugeschnittenes Bild wird hochgeladen…');
   };
 
   window.cancelCrop = () => {
@@ -1944,18 +1950,19 @@ Regeln:
 
 <!-- Bild Zuschneiden Modal -->
 <div class="modal" id="cropModal">
-  <div class="modal-sheet" style="max-height:95dvh">
+  <div class="modal-sheet" style="max-height:95dvh;gap:10px">
     <div class="modal-header">
-      <div class="modal-title">✂️ Bild zuschneiden</div>
+      <div class="modal-title">✂️ Bild bearbeiten</div>
       <button class="modal-close" onclick="cancelCrop()">✕</button>
     </div>
-    <div style="position:relative;overflow:hidden;border-radius:10px;background:#000;touch-action:none" id="cropContainer">
-      <img id="cropImage" style="display:block;max-width:100%;touch-action:none" draggable="false">
-      <div id="cropOverlay" style="position:absolute;border:3px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);cursor:move;touch-action:none"></div>
+    <div style="position:relative;border-radius:10px;background:#111;overflow:hidden" id="cropContainer">
+      <img id="cropImage" style="display:block;width:100%;height:auto;max-height:55dvh;object-fit:contain">
+      <canvas id="cropCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none"></canvas>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button onclick="cropImage()" class="btn-primary" style="flex:1">✂️ Zuschneiden & Speichern</button>
-      <button onclick="cancelCrop()" class="btn-secondary" style="flex:0 0 auto;margin-top:0">Abbrechen</button>
+    <div style="font-size:12px;color:var(--muted);text-align:center">Bereich zum Zuschneiden auswählen – oder ganzes Bild verwenden</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="useFullImage()" class="btn-secondary" style="flex:1;margin-top:0">🖼️ Ganzes Bild</button>
+      <button onclick="cropSelected()" class="btn-primary" style="flex:1">✂️ Auswahl speichern</button>
     </div>
   </div>
 </div>
