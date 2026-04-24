@@ -29,6 +29,29 @@
   let allRecipes = [];
   let activeFilter = 'alle';
   let timeFilter = false;
+  let saisonFilter = false;
+
+  const SAISON_ZUTATEN = {
+    winter:    ['kohl','grünkohl','rosenkohl','rotkohl','wirsing','lauch','porree','sellerie','möhre','karotte','pastinake','rote bete','rübe','feldsalat','chicorée','kartoffel','zwiebel','knoblauch','apfel','birne'],
+    fruehling: ['spargel','bärlauch','radieschen','spinat','rhabarber','erbse','kohlrabi','rettich','salat','frühlingszwiebel','schnittlauch','petersilie','erdbeere'],
+    sommer:    ['tomate','gurke','zucchini','paprika','aubergine','bohne','mais','fenchel','blumenkohl','brokkoli','himbeere','erdbeere','heidelbeere','kirsche','aprikose','pfirsich','pflaume'],
+    herbst:    ['kürbis','hokkaido','butternut','pilze','champignon','pfifferling','steinpilz','apfel','birne','pflaume','nuss','kastanie','rosenkohl','grünkohl','lauch','möhre','karotte','pastinake']
+  };
+
+  function getCurrentSaison() {
+    const m = new Date().getMonth() + 1;
+    if (m >= 3 && m <= 5) return { key: 'fruehling', label: '🌸 Frühling', monate: 'März–Mai' };
+    if (m >= 6 && m <= 8) return { key: 'sommer', label: '☀️ Sommer', monate: 'Jun–Aug' };
+    if (m >= 9 && m <= 11) return { key: 'herbst', label: '🍂 Herbst', monate: 'Sep–Nov' };
+    return { key: 'winter', label: '❄️ Winter', monate: 'Dez–Feb' };
+  }
+
+  function recipeMatchesSaison(r) {
+    const s = getCurrentSaison();
+    const zutaten = (r.ingredients || r.zutaten || []).map(z => (z.name||'').toLowerCase()).join(' ');
+    const title = (r.title||r.name||'').toLowerCase();
+    return SAISON_ZUTATEN[s.key].some(z => zutaten.includes(z) || title.includes(z));
+  }
   let searchTerm = '';
   let currentRecipe = null;
   let portionMultiplier = 1;
@@ -66,6 +89,7 @@
   function getFiltered() {
     let list = activeFilter === 'alle' ? allRecipes : allRecipes.filter(r => r.category === activeFilter);
     if (timeFilter) list = list.filter(r => r.duration > 0 && r.duration <= 30);
+    if (saisonFilter) list = list.filter(r => recipeMatchesSaison(r));
     if (searchTerm) {
       const terms = searchTerm.toLowerCase().split(/[,\s]+/).filter(Boolean);
       list = list.filter(r => {
@@ -130,9 +154,44 @@
     renderRecipes();
   };
 
+  window.toggleSaisonFilter = () => {
+    saisonFilter = !saisonFilter;
+    const btn = document.getElementById('saisonFilterBtn');
+    const info = document.getElementById('saisonInfo');
+    if (saisonFilter) {
+      const s = getCurrentSaison();
+      btn.textContent = s.label;
+      btn.classList.add('active');
+      info.style.display = 'block';
+      info.textContent = '🌿 Saisonales Gemüse ' + s.monate;
+    } else {
+      btn.textContent = '🌸 Saison';
+      btn.classList.remove('active');
+      info.style.display = 'none';
+    }
+    renderRecipes();
+  };
+
   window.toggleTimeFilter = () => {
     timeFilter = !timeFilter;
     document.getElementById('timeFilterBtn').classList.toggle('active', timeFilter);
+    renderRecipes();
+  };
+
+  window.toggleSaisonFilter = () => {
+    saisonFilter = !saisonFilter;
+    const btn = document.getElementById('saisonFilterBtn');
+    const info = document.getElementById('saisonInfo');
+    btn.classList.toggle('active', saisonFilter);
+    if (saisonFilter) {
+      const s = getCurrentSaison();
+      btn.textContent = s.label;
+      info.style.display = 'block';
+      info.textContent = '🌿 Zeigt Rezepte mit saisonalem Gemüse (' + s.monate + ')';
+    } else {
+      btn.textContent = '🌸 Saison';
+      info.style.display = 'none';
+    }
     renderRecipes();
   };
 
@@ -388,45 +447,10 @@
   window.onPhotoSelected = e => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
-    reader.onload = async ev => {
-      const img = new Image();
-      img.onload = async () => {
-        const MAX = 900;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        capturedImageData = canvas.toDataURL('image/jpeg', 0.75);
-        if (capturedImageData.length > 800000) {
-          capturedImageData = canvas.toDataURL('image/jpeg', 0.5);
-        }
-
-        // Vorschau anzeigen
-        document.getElementById('photoPreview').src = capturedImageData;
-        document.getElementById('photoPreviewWrap').style.display = 'block';
-
-        // Zu imgBB hochladen
-        if (localStorage.getItem('imgbbKey')) {
-          document.getElementById('photoSizeInfo').textContent = '⏳ Bild wird hochgeladen…';
-          const imageUrl = await uploadToImgbb(capturedImageData);
-          if (imageUrl) {
-            document.getElementById('recipeImage').value = imageUrl;
-            capturedImageData = null;
-            document.getElementById('photoSizeInfo').textContent = '✅ Bild erfolgreich hochgeladen!';
-          } else {
-            document.getElementById('photoSizeInfo').textContent = '❌ Upload fehlgeschlagen – prüfe den imgBB Key in ⚙️';
-          }
-        } else {
-          document.getElementById('photoSizeInfo').textContent = '⚠️ Kein imgBB Key – bitte in ⚙️ Einstellungen eintragen!';
-        }
-      };
-      img.src = ev.target.result;
+    reader.onload = ev => {
+      // Öffne Zuschneiden-Modal
+      initCrop(ev.target.result);
     };
     reader.readAsDataURL(file);
   };
@@ -567,6 +591,109 @@
   };
 
   renderShopping();
+
+  // ── Bild Zuschneiden ─────────────────────────────────────
+  let cropData = { startX:0, startY:0, x:0, y:0, w:200, h:200, dragging:false, resizing:false, imgNaturalW:0, imgNaturalH:0 };
+
+  window.initCrop = (dataUrl) => {
+    const img = document.getElementById('cropImage');
+    img.src = dataUrl;
+    img.onload = () => {
+      const container = document.getElementById('cropContainer');
+      const cw = container.offsetWidth;
+      const ch = img.offsetHeight;
+      cropData.imgNaturalW = img.naturalWidth;
+      cropData.imgNaturalH = img.naturalHeight;
+      // Initial crop box = center 70%
+      cropData.w = Math.round(cw * 0.7);
+      cropData.h = Math.round(ch * 0.7);
+      cropData.x = Math.round((cw - cropData.w) / 2);
+      cropData.y = Math.round((ch - cropData.h) / 2);
+      updateCropOverlay();
+    };
+    document.getElementById('cropModal').classList.add('open');
+    setupCropEvents();
+  };
+
+  function updateCropOverlay() {
+    const ov = document.getElementById('cropOverlay');
+    ov.style.left = cropData.x + 'px';
+    ov.style.top = cropData.y + 'px';
+    ov.style.width = cropData.w + 'px';
+    ov.style.height = cropData.h + 'px';
+  }
+
+  function setupCropEvents() {
+    const ov = document.getElementById('cropOverlay');
+    const getPos = e => e.touches ? {x: e.touches[0].clientX, y: e.touches[0].clientY} : {x: e.clientX, y: e.clientY};
+    const container = document.getElementById('cropContainer');
+    const rect = () => container.getBoundingClientRect();
+
+    ov.addEventListener('mousedown', e => { cropData.dragging=true; cropData.startX=e.clientX-cropData.x; cropData.startY=e.clientY-cropData.y; e.preventDefault(); });
+    ov.addEventListener('touchstart', e => { cropData.dragging=true; const p=getPos(e); cropData.startX=p.x-cropData.x; cropData.startY=p.y-cropData.y; e.preventDefault(); }, {passive:false});
+
+    document.addEventListener('mousemove', e => {
+      if (!cropData.dragging) return;
+      const r = rect();
+      cropData.x = Math.max(0, Math.min(e.clientX - cropData.startX, r.width - cropData.w));
+      cropData.y = Math.max(0, Math.min(e.clientY - cropData.startY, document.getElementById('cropImage').offsetHeight - cropData.h));
+      updateCropOverlay();
+    });
+    document.addEventListener('touchmove', e => {
+      if (!cropData.dragging) return;
+      const p = getPos(e);
+      const r = rect();
+      cropData.x = Math.max(0, Math.min(p.x - cropData.startX, r.width - cropData.w));
+      cropData.y = Math.max(0, Math.min(p.y - cropData.startY, document.getElementById('cropImage').offsetHeight - cropData.h));
+      updateCropOverlay();
+      e.preventDefault();
+    }, {passive:false});
+    document.addEventListener('mouseup', () => cropData.dragging = false);
+    document.addEventListener('touchend', () => cropData.dragging = false);
+  }
+
+  window.cropImage = async () => {
+    const img = document.getElementById('cropImage');
+    const container = document.getElementById('cropContainer');
+    const displayW = container.offsetWidth;
+    const displayH = img.offsetHeight;
+    const scaleX = img.naturalWidth / displayW;
+    const scaleY = img.naturalHeight / displayH;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(cropData.w * scaleX);
+    canvas.height = Math.round(cropData.h * scaleY);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img,
+      cropData.x * scaleX, cropData.y * scaleY,
+      cropData.w * scaleX, cropData.h * scaleY,
+      0, 0, canvas.width, canvas.height
+    );
+    capturedImageData = canvas.toDataURL('image/jpeg', 0.85);
+    document.getElementById('cropModal').classList.remove('open');
+
+    // Zu imgBB hochladen
+    document.getElementById('photoPreview').src = capturedImageData;
+    document.getElementById('photoPreviewWrap').style.display = 'block';
+    if (localStorage.getItem('imgbbKey')) {
+      document.getElementById('photoSizeInfo').textContent = '⏳ Bild wird hochgeladen…';
+      const url = await uploadToImgbb(capturedImageData);
+      if (url) {
+        document.getElementById('recipeImage').value = url;
+        capturedImageData = null;
+        document.getElementById('photoSizeInfo').textContent = '✅ Bild zugeschnitten & hochgeladen!';
+      } else {
+        document.getElementById('photoSizeInfo').textContent = '❌ Upload fehlgeschlagen';
+      }
+    } else {
+      document.getElementById('photoSizeInfo').textContent = '⚠️ Kein imgBB Key in ⚙️';
+    }
+  };
+
+  window.cancelCrop = () => {
+    document.getElementById('cropModal').classList.remove('open');
+  };
+
   // Kalender beim Start initialisieren
   setTimeout(() => renderKalender(), 800);
 
@@ -1349,6 +1476,8 @@ Regeln:
   .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
   #timeFilterBtn { border: 1.5px solid var(--border); background: #fff; color: var(--muted); padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap; }
   #timeFilterBtn.active { background: #fff4ed; color: var(--primary); border-color: var(--primary); }
+  #saisonFilterBtn { border: 1.5px solid var(--border); background: #fff; color: var(--muted); padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  #saisonFilterBtn.active { background: #f0fdf4; color: #16a34a; border-color: #16a34a; }
 
   /* Recipe Grid */
   #recipeGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -1552,7 +1681,9 @@ Regeln:
         <button class="filter-btn" data-filter="Zusammen" onclick="setFilter('Zusammen')">👨‍👩‍👦 Zusammen</button>
         <button class="filter-btn" data-filter="Vegetarisch" onclick="setFilter('Vegetarisch')">🥦 Vegetarisch</button>
         <button id="timeFilterBtn" onclick="toggleTimeFilter()">⏱ &lt; 30 Min</button>
+        <button id="saisonFilterBtn" onclick="toggleSaisonFilter()">🌸 Saison</button>
       </div>
+      <div id="saisonInfo" style="display:none;font-size:12px;color:var(--muted);padding:2px 4px"></div>
       <div id="firebaseStatus" style="display:none;background:#fde8e8;color:#c0392b;padding:12px;border-radius:10px;font-size:13px;margin-top:8px"></div>
       <div id="recipeGrid"></div>
     </div>
@@ -1796,6 +1927,24 @@ Regeln:
     <div id="urlImportStatus" style="display:none;font-size:13px;color:var(--muted);padding:10px;background:#f5f5f5;border-radius:var(--rs);text-align:center"></div>
     <button class="btn-primary" onclick="importFromUrl()">🔗 Rezept importieren</button>
     <button class="btn-secondary" onclick="closeModal('urlImportModal')">Abbrechen</button>
+  </div>
+</div>
+
+<!-- Bild Zuschneiden Modal -->
+<div class="modal" id="cropModal">
+  <div class="modal-sheet" style="max-height:95dvh">
+    <div class="modal-header">
+      <div class="modal-title">✂️ Bild zuschneiden</div>
+      <button class="modal-close" onclick="cancelCrop()">✕</button>
+    </div>
+    <div style="position:relative;overflow:hidden;border-radius:10px;background:#000;touch-action:none" id="cropContainer">
+      <img id="cropImage" style="display:block;max-width:100%;touch-action:none" draggable="false">
+      <div id="cropOverlay" style="position:absolute;border:3px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);cursor:move;touch-action:none"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="cropImage()" class="btn-primary" style="flex:1">✂️ Zuschneiden & Speichern</button>
+      <button onclick="cancelCrop()" class="btn-secondary" style="flex:0 0 auto;margin-top:0">Abbrechen</button>
+    </div>
   </div>
 </div>
 
