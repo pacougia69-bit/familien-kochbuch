@@ -921,6 +921,18 @@ Regeln:
     document.getElementById('kalenderDayModal').classList.add('open');
   };
 
+  window.deleteKalenderEintrag = async (dateStr, idx) => {
+    if (!confirm('Diesen Eintrag löschen?')) return;
+    const snap = await getDoc(doc(db, 'kalender', dateStr));
+    if (!snap.exists()) return;
+    const data = snap.data();
+    data.gerichte.splice(idx, 1);
+    await setDoc(doc(db, 'kalender', dateStr), data);
+    // Modal neu laden
+    openKalenderDay(dateStr);
+    renderKalender();
+  };
+
   window.saveKalenderNotiz = async () => {
     const modal = document.getElementById('kalenderDayModal');
     const dateStr = modal.dataset.date;
@@ -1543,8 +1555,8 @@ Regeln:
   .modal-close { border: none; background: var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
   /* Detail */
-  .detail-hero { position: relative; height: 210px; border-radius: 16px; overflow: hidden; background: #f0e6d8; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .detail-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .detail-hero { position: relative; min-height: 240px; max-height: 320px; border-radius: 16px; overflow: hidden; background: #f0e6d8; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .detail-hero img { width: 100%; height: 100%; object-fit: contain; max-height: 320px; }
   .hero-gradient { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.5) 0%, transparent 60%); }
   .hero-emoji { font-size: 72px; }
   .detail-action-row { display: flex; gap: 10px; }
